@@ -1,0 +1,211 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
+  --font-hand: var(--font-hand), "Segoe Print", cursive;
+  --font-stamp: var(--font-stamp), ui-monospace, monospace;
+  --font-heading: var(--font-display), var(--font-body), sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-olive: var(--olive);
+  --color-olive-soft: var(--olive-soft);
+  --color-olive-foreground: var(--olive-foreground);
+  --color-note: var(--note);
+  --color-print: var(--print);
+  --color-blank: var(--blank);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --animate-kenburns: kenburns 18s ease-in-out infinite alternate;
+  @keyframes kenburns {
+    from { transform: scale(1.02); }
+    to { transform: scale(1.12) translate(-2%, 1%); }
+  }
+  --animate-story-fill: story-fill 5s linear forwards;
+  @keyframes story-fill {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
+}
+
+/* Earthy light theme: sand, espresso, terracotta, olive */
+:root {
+  --background: #efe7da;
+  --foreground: #2e241d;
+  --card: #fbf7f0;
+  --card-foreground: #2e241d;
+  --popover: #fbf7f0;
+  --popover-foreground: #2e241d;
+  --primary: #b4552f;
+  --primary-foreground: #ffffff;
+  --secondary: #e7dccb;
+  --secondary-foreground: #2e241d;
+  --muted: #e9dfd0;
+  --muted-foreground: #7c6a5b;
+  --accent: #f1dccb;
+  --accent-foreground: #9a4424;
+  --destructive: #b3261e;
+  --border: #e2d6c4;
+  --input: #dccfbb;
+  --ring: #b4552f;
+  --chart-1: #b4552f;
+  --chart-2: #66773a;
+  --chart-3: #c99a5b;
+  --chart-4: #7c6a5b;
+  --chart-5: #3e5a5c;
+  --radius: 0.875rem;
+  --sidebar: #f6f0e6;
+  --sidebar-foreground: #2e241d;
+  --sidebar-primary: #b4552f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fbf7f0;
+  --sidebar-accent-foreground: #2e241d;
+  --sidebar-border: #e2d6c4;
+  --sidebar-ring: #b4552f;
+
+  --olive: #66773a;
+  --olive-soft: #e3e6cf;
+  --olive-foreground: #ffffff;
+  --note: #9a4424;
+  --print: #fffbf4;
+  --print-shadow: rgba(70, 45, 25, 0.22);
+  --blank: #e6dccd;
+}
+
+/* Warm coffee dark theme */
+.dark {
+  --background: #1a1512;
+  --foreground: #f2e9df;
+  --card: #2a221d;
+  --card-foreground: #f2e9df;
+  --popover: #2a221d;
+  --popover-foreground: #f2e9df;
+  --primary: #e08a5c;
+  --primary-foreground: #1e120c;
+  --secondary: #30271f;
+  --secondary-foreground: #f2e9df;
+  --muted: #2a221d;
+  --muted-foreground: #b09f8f;
+  --accent: #3d261b;
+  --accent-foreground: #efa27a;
+  --destructive: #f2897d;
+  --border: #3a2f28;
+  --input: #43382d;
+  --ring: #e08a5c;
+  --chart-1: #e08a5c;
+  --chart-2: #a9b872;
+  --chart-3: #d8b07a;
+  --chart-4: #b09f8f;
+  --chart-5: #7fa3a4;
+  --sidebar: #211a16;
+  --sidebar-foreground: #f2e9df;
+  --sidebar-primary: #e08a5c;
+  --sidebar-primary-foreground: #1e120c;
+  --sidebar-accent: #2a221d;
+  --sidebar-accent-foreground: #f2e9df;
+  --sidebar-border: #3a2f28;
+  --sidebar-ring: #e08a5c;
+
+  --olive: #a9b872;
+  --olive-soft: #2e3120;
+  --olive-foreground: #1a1c10;
+  --note: #f0b48a;
+  --print: #ede3d6;
+  --print-shadow: rgba(0, 0, 0, 0.5);
+  --blank: #d9cdbd;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 30%, transparent);
+  }
+}
+
+@layer components {
+  .polaroid {
+    background: var(--print);
+    box-shadow: 0 1px 1px var(--print-shadow), 0 10px 22px var(--print-shadow);
+  }
+  .glass {
+    background: rgb(255 255 255 / 0.16);
+    border: 1px solid rgb(255 255 255 / 0.3);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 10px 30px rgb(0 0 0 / 0.16);
+  }
+  .date-stamp {
+    font-family: var(--font-stamp);
+    letter-spacing: 0.08em;
+    color: #ffae73;
+    text-shadow: 0 0 8px rgb(255 120 40 / 0.55);
+  }
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

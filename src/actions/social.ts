@@ -25,6 +25,8 @@ export type MediaSocial = {
   canEdit: boolean;
   reactions: { kind: ReactionKind; count: number; mine: boolean; names: string[] }[];
   comments: { id: string; body: string; createdAt: string; userId: string; name: string; image: string | null; canDelete: boolean }[];
+  /** Server time when this was fetched — the reference for comment relative times (fetched client-side, after page load). */
+  now: string;
 };
 
 export async function getMediaSocial(mediaId: string) {
@@ -49,6 +51,7 @@ export async function getMediaSocial(mediaId: string) {
       .orderBy(asc(comments.createdAt));
 
     return {
+      now: new Date().toISOString(),
       favorited: Boolean(favorite),
       canEdit: await canEditAlbum(current, item.albumId),
       reactions: REACTION_KINDS.map((kind) => {

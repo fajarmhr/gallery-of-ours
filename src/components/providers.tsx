@@ -13,7 +13,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      // The theme script only needs to run from the SSR HTML. On client renders React 19 warns about
+      // <script> tags, so mark it as a non-executable data block there (next-themes suppresses the mismatch).
+      scriptProps={{ type: typeof window === "undefined" ? "text/javascript" : "application/json" }}
+    >
       <TooltipProvider delayDuration={300}>
         {children}
         <Toaster position="top-center" richColors closeButton />

@@ -29,8 +29,9 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
     );
   }
 
-  const selected = places.find((p) => p.id === params.p) ?? places[0]!;
-  const items = await getPlaceMedia(user.id, selected.id);
+  // Nothing is selected until a place is picked on the map or in the list.
+  const selected = places.find((p) => p.id === params.p);
+  const items = selected ? await getPlaceMedia(user.id, selected.id) : [];
   const totalPhotos = places.reduce((sum, p) => sum + p.count, 0);
 
   return (
@@ -46,7 +47,7 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <PlacesMap
-          selectedId={selected.id}
+          selectedId={selected?.id ?? null}
           places={places.map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, count: p.count, coverUrl: mediaUrl(p.coverId, "thumb") }))}
         />
         <ul className="flex max-h-[540px] flex-col gap-1 overflow-y-auto">
@@ -55,10 +56,10 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
               <Link
                 href={`/places?p=${place.id}`}
                 scroll={false}
-                aria-current={place.id === selected.id ? "true" : undefined}
+                aria-current={place.id === selected?.id ? "true" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-2xl border border-transparent p-2 transition-colors hover:bg-foreground/5",
-                  place.id === selected.id && "border-border bg-card shadow-sm",
+                  place.id === selected?.id && "border-border bg-card shadow-sm",
                 )}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -75,13 +76,17 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
         </ul>
       </div>
 
-      <section className="mt-10">
-        <div className="mb-4 flex flex-wrap items-baseline gap-x-3">
-          <h2 className="font-display text-2xl font-bold tracking-tight">{selected.name}</h2>
-          <span className="text-sm text-muted-foreground">{t("photosHere")}</span>
-        </div>
-        <MediaGallery groups={[{ key: selected.id, items }]} />
-      </section>
+      {selected ? (
+        <section className="mt-10">
+          <div className="mb-4 flex flex-wrap items-baseline gap-x-3">
+            <h2 className="font-display text-2xl font-bold tracking-tight">{selected.name}</h2>
+            <span className="text-sm text-muted-foreground">{t("photosHere")}</span>
+          </div>
+          <MediaGallery groups={[{ key: selected.id, items }]} />
+        </section>
+      ) : (
+        <p className="mt-10 text-center text-sm text-muted-foreground">{t("pickPlace")}</p>
+      )}
     </>
   );
 }

@@ -19,6 +19,8 @@ export default getRequestConfig(async () => {
   return {
     locale,
     timeZone: process.env.APP_TIMEZONE || "Asia/Jakarta",
+    // Shared reference for relative times so the server render and hydration agree.
+    now: new Date(),
     messages: (await import(`../messages/${locale}.json`)).default,
   };
 });

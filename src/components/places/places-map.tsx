@@ -11,6 +11,9 @@ export const MAP_STYLES = {
   dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
 };
 
+/** Copied into public/ by scripts/copy-maplibre-worker.mjs — Turbopack's bundled copy can't resolve its shared chunk. */
+export const MAPLIBRE_WORKER_URL = "/maplibre/maplibre-gl-worker.mjs";
+
 export type MapPlace = { id: string; name: string; lat: number; lng: number; count: number; coverUrl: string };
 
 export function PlacesMap({ places, selectedId }: { places: MapPlace[]; selectedId: string | null }) {
@@ -35,6 +38,7 @@ export function PlacesMap({ places, selectedId }: { places: MapPlace[]; selected
       <MapGL
         initialViewState={initialViewState}
         mapStyle={resolvedTheme === "dark" ? MAP_STYLES.dark : MAP_STYLES.light}
+        workerUrl={MAPLIBRE_WORKER_URL}
         style={{ width: "100%", height: "100%" }}
         attributionControl={{ compact: true }}
       >

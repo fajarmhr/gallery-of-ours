@@ -301,7 +301,8 @@
     "emptyTitle": "No places yet",
     "emptyText": "Photos taken with location turned on show up on the map.",
     "openGlobe": "View globe",
-    "photosHere": "Photos from here"
+    "photosHere": "Photos from here",
+    "pickPlace": "Tap a place to see the photos taken there."
   },
   "globe": {
     "title": "Globe",

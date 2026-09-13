@@ -160,7 +160,7 @@ export function SocialPanel({
                 <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm bg-muted px-3 py-2">
                   <p className="text-xs">
                     <span className="font-bold">{c.name}</span>{" "}
-                    <span className="text-muted-foreground">{format.relativeTime(new Date(c.createdAt))}</span>
+                    <span className="text-muted-foreground">{format.relativeTime(new Date(c.createdAt), new Date(social.now))}</span>
                   </p>
                   <p className="whitespace-pre-wrap break-words text-sm">{c.body}</p>
                 </div>

@@ -411,13 +411,15 @@ export async function getTrash() {
 
 export async function getRecapYears(viewerId: string, timeZone: string) {
   const yearExpr = sql<number>`extract(year from ${sortDate} at time zone ${timeZone})::int`;
+  // Group/order by ordinal: repeating yearExpr binds the time zone as new params ($1 vs $6),
+  // which Postgres treats as a different expression → "must appear in the GROUP BY clause".
   return db
     .select({ year: yearExpr, count: sql<number>`count(*)::int`, coverId: sql<string>`(array_agg(${media.id} order by random()))[1]` })
     .from(media)
     .innerJoin(albums, eq(media.albumId, albums.id))
     .where(and(visibleMedia(viewerId), eq(media.status, "ready")))
-    .groupBy(yearExpr)
-    .orderBy(desc(yearExpr));
+    .groupBy(sql`1`)
+    .orderBy(sql`1 desc`);
 }
 
 export async function getRecap(viewerId: string, year: number, timeZone: string) {

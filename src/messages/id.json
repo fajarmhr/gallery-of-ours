@@ -301,7 +301,8 @@
     "emptyTitle": "Belum ada tempat",
     "emptyText": "Foto yang diambil dengan lokasi aktif akan muncul di peta.",
     "openGlobe": "Lihat bola dunia",
-    "photosHere": "Foto dari sini"
+    "photosHere": "Foto dari sini",
+    "pickPlace": "Ketuk salah satu tempat untuk melihat foto dari sana."
   },
   "globe": {
     "title": "Bola dunia",

@@ -37,9 +37,16 @@ yarn-error.log*
 # local uploads when R2 is not configured
 /.data/
 
+# maplibre worker, copied by scripts/copy-maplibre-worker.mjs
+/public/maplibre/
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude AI
+CLAUDE.md
+AGENTS.md

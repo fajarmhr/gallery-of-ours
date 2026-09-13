@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { albums, media } from "@/db/schema";
 import { run, UserError } from "@/lib/action";
 import { logActivity } from "@/lib/activity";
+import { destroyCloudinaryMedia, isCloudinarySource } from "@/lib/cloudinary";
 import { assertAdmin } from "@/lib/permissions";
 import { actionUser } from "@/lib/session";
 import { mediaKeys, storage } from "@/lib/storage";
@@ -15,7 +16,15 @@ const TRASH_DAYS = 30;
 async function destroyMedia(ids: string[]) {
   if (!ids.length) return;
   const files = await storage();
-  for (const id of ids) await files.removePrefix(mediaKeys(id).prefix);
+  const rows = await db
+    .select({ id: media.id, source: media.source, originalKey: media.originalKey, originalName: media.originalName, type: media.type })
+    .from(media)
+    .where(inArray(media.id, ids));
+  for (const row of rows) {
+    // Imported Cloudinary files are deleted from that Cloudinary account too.
+    if (isCloudinarySource(row.source)) await destroyCloudinaryMedia(row);
+    else await files.removePrefix(mediaKeys(row.id).prefix);
+  }
   await db.delete(media).where(inArray(media.id, ids));
 }
 

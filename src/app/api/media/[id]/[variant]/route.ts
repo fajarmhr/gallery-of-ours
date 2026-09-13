@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { albums, media } from "@/db/schema";
+import { cloudinaryDeliveryUrl, isCloudinarySource } from "@/lib/cloudinary";
 import { isAdmin, isAlbumLocked } from "@/lib/permissions";
 import { shareAllowsAlbum, shareCookieName } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
@@ -46,27 +47,32 @@ export async function GET(request: NextRequest, context: Context) {
   }
   if (!allowed) return new Response("Not found", { status: 404 });
 
-  const fallback = item.type === "video" ? item.posterKey : (item.displayKey ?? item.originalKey);
-  let key: string | null | undefined;
-  switch (variant) {
-    case "thumb":
-    case "medium":
-    case "large":
-      key = item.variants[variant]?.key ?? fallback;
-      break;
-    case "poster":
-      key = item.posterKey ?? item.variants.large?.key;
-      break;
-    default:
-      key = item.originalKey;
-  }
-  if (!key) return new Response("Not found", { status: 404 });
+  let target: string;
+  if (isCloudinarySource(item.source)) {
+    target = cloudinaryDeliveryUrl(item, variant);
+  } else {
+    const fallback = item.type === "video" ? item.posterKey : (item.displayKey ?? item.originalKey);
+    let key: string | null | undefined;
+    switch (variant) {
+      case "thumb":
+      case "medium":
+      case "large":
+        key = item.variants[variant]?.key ?? fallback;
+        break;
+      case "poster":
+        key = item.posterKey ?? item.variants.large?.key;
+        break;
+      default:
+        key = item.originalKey;
+    }
+    if (!key) return new Response("Not found", { status: 404 });
 
-  const files = await storage();
-  const target = await files.presignGet(key, {
-    expiresInSec: 7200,
-    filename: variant === "download" ? (item.originalName ?? key.split("/").pop()) : undefined,
-  });
+    const files = await storage();
+    target = await files.presignGet(key, {
+      expiresInSec: 7200,
+      filename: variant === "download" ? (item.originalName ?? key.split("/").pop()) : undefined,
+    });
+  }
   const response = NextResponse.redirect(new URL(target, request.url), 302);
   response.headers.set("Cache-Control", variant === "download" ? "no-store" : "private, max-age=1500");
   return response;

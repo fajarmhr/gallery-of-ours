@@ -9,10 +9,14 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
+    "db:push:prod": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:studio:prod": "drizzle-kit studio",
     "seed:demo": "tsx --env-file=.env.local scripts/seed-demo.ts",
     "seed:remove": "tsx --env-file=.env.local scripts/remove-demo.ts",
-    "create-superadmin": "tsx --env-file=.env.local scripts/create-superadmin.ts"
+    "seed:remove:prod": "tsx --env-file=.env.production.local scripts/remove-demo.ts",
+    "create-superadmin": "tsx --env-file=.env.local scripts/create-superadmin.ts",
+    "create-superadmin:prod": "tsx --env-file=.env.production.local scripts/create-superadmin.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
@@ -21,6 +25,7 @@
     "better-auth": "^1.7.4",
     "class-variance-authority": "^0.7.1",
     "client-zip": "^2.5.0",
+    "cloudinary": "2.11.0",
     "cn": "^0.3.0",
     "drizzle-orm": "^0.45.2",
     "exifr": "^7.1.3",

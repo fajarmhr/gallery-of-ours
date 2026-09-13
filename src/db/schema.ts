@@ -137,6 +137,8 @@ export const media = pgTable(
     uploaderId: text("uploader_id").references(() => user.id, { onDelete: "set null" }),
     type: text("type").notNull(),
     status: text("status").default("uploading").notNull(),
+    /** "primary" (R2 or local storage) or "cloudinary:<cloud name>", where originalKey is the Cloudinary public_id. */
+    source: text("source").default("primary").notNull(),
     originalKey: text("original_key").notNull(),
     originalName: text("original_name"),
     mime: text("mime").notNull(),

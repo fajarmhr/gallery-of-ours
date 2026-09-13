@@ -51,6 +51,7 @@ New sign-ups confirm their email, then wait on a "Waiting for a family admin" sc
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | In production | Files are saved in `LOCAL_STORAGE_DIR` (development only) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | In production | Verification and reset emails are printed in the terminal |
 | `ANTHROPIC_API_KEY`, `AI_DAILY_CAPTION_LIMIT` | Optional | No AI captions or AI search tags |
+| `CLOUDINARY_URL_1`, `CLOUDINARY_URL_2` | Optional | No "Add from Cloudinary" button in albums |
 | `SUPERADMIN_EMAIL` | Optional | Sign-ups with this email become superadmin automatically |
 | `APP_TIMEZONE` | Optional | `Asia/Jakarta` |
 | `NEXT_PUBLIC_FAMILY_SINCE` | Optional | Hides the "since 1998" note under the logo |
@@ -64,10 +65,12 @@ New sign-ups confirm their email, then wait on a "Waiting for a family admin" sc
    [{ "AllowedOrigins": ["https://your-domain.com"], "AllowedMethods": ["GET", "PUT"], "AllowedHeaders": ["Content-Type"], "MaxAgeSeconds": 3600 }]
    ```
 3. **Resend:** verify your domain so emails reach family inboxes, then set `EMAIL_FROM` to an address on it.
-4. Run `pnpm db:push` against the production database and `pnpm create-superadmin` for yourself.
+4. Put the production values in `.env.production.local` (git-ignored). Run `pnpm db:push:prod`, then `pnpm seed:remove:prod` if that database still has the demo family (fill in the R2 values first, so the script doesn't delete your local demo files), then `pnpm create-superadmin:prod` for yourself. Vercel never reads this file: paste its contents into **Settings → Environment Variables** for the Production environment, and redeploy after every change.
 5. **AI captions (optional):** add `ANTHROPIC_API_KEY` and set a monthly spend limit in the Anthropic Console. `AI_DAILY_CAPTION_LIMIT` caps captions per day.
 
 ## Scripts
+
+Scripts ending in `:prod` read `.env.production.local`; the others read `.env.local`. On your computer, `pnpm build` and `pnpm start` load `.env.production.local` first and fill anything missing from `.env.local`.
 
 | Command | What it does |
 | --- | --- |
@@ -76,10 +79,12 @@ New sign-ups confirm their email, then wait on a "Waiting for a family admin" sc
 | `pnpm db:push` / `pnpm db:studio` | Sync the schema, browse the database |
 | `pnpm seed:demo` / `pnpm seed:remove` | Add or remove the demo family |
 | `pnpm create-superadmin` | Create or promote a superadmin |
+| `pnpm db:push:prod` / `pnpm db:studio:prod` / `pnpm seed:remove:prod` / `pnpm create-superadmin:prod` | The same, against production |
 
 ## Privacy notes
 
 - Photos are served through `/api/media/…`, which checks the session (or a share link) and then redirects to a short-lived signed URL. Nothing is public in the bucket.
+- Photos imported from Cloudinary stay in that account but are switched to private (authenticated) delivery, so their old public links stop working. The app serves them through signed Cloudinary URLs, which don't expire, and emptying the trash deletes them from Cloudinary.
 - Time capsules stay hidden from everyone except the person who sealed them until the unlock date.
 - GPS coordinates are sent to OpenStreetMap Nominatim to name places. Set `GEOCODING=off` to keep them local. Map tiles come from CARTO.
 - Deleted items stay in the trash for 30 days, then they're removed from storage.

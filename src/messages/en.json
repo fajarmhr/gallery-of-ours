@@ -77,7 +77,9 @@
     "link_expired": "This link has expired or was turned off.",
     "capsule_locked": "Time capsules can't be shared until they open.",
     "not_in_trash": "Move items to the trash before deleting them forever.",
-    "network": "Couldn't reach the server. Check your connection."
+    "network": "Couldn't reach the server. Check your connection.",
+    "already_imported": "That photo was already added.",
+    "cloudinary_unavailable": "Cloudinary didn't accept the keys for this account. Check CLOUDINARY_URL."
   },
   "welcome": {
     "note": "a private family album",
@@ -285,6 +287,26 @@
     "noAccess": "You can view albums. Ask an admin for editing access to upload.",
     "keepOpen": "Keep this page open until uploads finish.",
     "remove": "Remove"
+  },
+  "cloudinary": {
+    "button": "Add from Cloudinary",
+    "title": "Add from Cloudinary",
+    "description": "Photos stay in Cloudinary but become private there, so old Cloudinary links stop working.",
+    "account": "Cloudinary account",
+    "folders": "Folders",
+    "home": "All folders",
+    "empty": "Nothing in this folder.",
+    "loadFailed": "Couldn't open this folder. Try again in a moment.",
+    "added": "Added",
+    "private": "Already private",
+    "selectAll": "Select all",
+    "clearSelection": "Clear selection",
+    "fallbackDate": "Date for photos without their own date",
+    "fallbackHint": "Leave empty to use the date they were uploaded to Cloudinary.",
+    "import": "{count, plural, =0 {Add photos} one {Add # photo} other {Add # photos}}",
+    "importing": "Adding {done} of {total}…",
+    "done": "{count, plural, one {# photo added} other {# photos added}}",
+    "someFailed": "{count, plural, one {# photo couldn't be added.} other {# photos couldn't be added.}}"
   },
   "timeline": {
     "title": "Timeline",

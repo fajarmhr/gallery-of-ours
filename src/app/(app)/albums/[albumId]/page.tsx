@@ -7,6 +7,7 @@ import { AlbumHeader } from "@/components/albums/album-header";
 import { EmptyState } from "@/components/empty-state";
 import { MediaGallery, type MediaGroup } from "@/components/media/media-grid";
 import type { StorySlide } from "@/components/story/story-player";
+import { cloudinaryAccountOptions } from "@/lib/cloudinary";
 import { env } from "@/lib/env";
 import { dayKey, daysBetween, filmStamp, formatDateRange, mediaUrl } from "@/lib/format";
 import { canEditAlbum, isAdmin, isAlbumLocked } from "@/lib/permissions";
@@ -121,6 +122,7 @@ export default async function AlbumPage({ params }: PageProps<"/albums/[albumId]
         canEdit={canEdit}
         isAdmin={isAdmin(user)}
         itemCount={items.length}
+        cloudinaryAccounts={isAdmin(user) ? cloudinaryAccountOptions() : []}
         slides={slides}
       />
       {items.length === 0 ? (

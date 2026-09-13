@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { db } from "@/db";
 import { albums, media } from "@/db/schema";
+import { fetchCloudinaryFile, isCloudinarySource } from "@/lib/cloudinary";
 import { isAlbumLocked } from "@/lib/permissions";
 import { shareAllowsAlbum, shareCookieName } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
@@ -49,7 +50,8 @@ export async function GET(request: NextRequest, context: Context) {
       const seen = used.get(base) ?? 0;
       used.set(base, seen + 1);
       const name = seen ? base.replace(/(\.[^.]*)?$/, ` (${seen})$1`) : base;
-      yield { name, lastModified: item.takenAt ?? item.createdAt, input: await files.getBuffer(item.originalKey) };
+      const input = isCloudinarySource(item.source) ? await fetchCloudinaryFile(item, "original") : await files.getBuffer(item.originalKey);
+      yield { name, lastModified: item.takenAt ?? item.createdAt, input };
     }
   }
 

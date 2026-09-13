@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Ellipsis, Music, Pencil, Share2, Trash2, Upload } from "lucide-react";
+import { CloudDownload, Download, Ellipsis, Music, Pencil, Share2, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
@@ -29,6 +29,7 @@ import { useUpload } from "@/components/upload/upload-context";
 import { putWithProgress } from "@/components/upload/prepare-file";
 import { mediaUrl } from "@/lib/format";
 import { AlbumFormDialog } from "./album-form-dialog";
+import { CloudinaryImportDialog, type CloudinaryAccountOption } from "./cloudinary-import-dialog";
 import { ShareDialog } from "./share-dialog";
 
 type Props = {
@@ -49,18 +50,23 @@ type Props = {
   isAdmin: boolean;
   itemCount: number;
   slides: StorySlide[];
+  /** Cloudinary accounts an admin can import from; empty for everyone else. */
+  cloudinaryAccounts: CloudinaryAccountOption[];
 };
 
-export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount, slides }: Props) {
+export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount, slides, cloudinaryAccounts }: Props) {
   const t = useTranslations("albums");
   const tc = useTranslations("common");
   const te = useTranslations("errors");
+  const tcl = useTranslations("cloudinary");
   const router = useRouter();
   const { open: openUpload } = useUpload();
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [cloudinaryOpen, setCloudinaryOpen] = useState(false);
   const musicInput = useRef<HTMLInputElement>(null);
+  const canImport = canEdit && isAdmin && cloudinaryAccounts.length > 0;
 
   const fail = (code: string) => toast.error(te.has(code) ? te(code) : te("unknown"));
 
@@ -149,11 +155,17 @@ export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount,
         </div>
 
         {canEdit ? (
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Button onClick={() => openUpload(album.id)} className="h-10 rounded-xl px-4">
               <Upload />
               {t("addPhotos")}
             </Button>
+            {canImport ? (
+              <Button variant="ghost" onClick={() => setCloudinaryOpen(true)} className="glass h-10 rounded-xl px-4 text-white hover:bg-white/25 hover:text-white">
+                <CloudDownload />
+                {tcl("button")}
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -188,6 +200,7 @@ export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount,
         />
       ) : null}
       {isAdmin ? <ShareDialog albumId={album.id} open={shareOpen} onOpenChange={setShareOpen} /> : null}
+      {canImport ? <CloudinaryImportDialog albumId={album.id} accounts={cloudinaryAccounts} open={cloudinaryOpen} onOpenChange={setCloudinaryOpen} /> : null}
 
       <AlertDialog open={trashOpen} onOpenChange={setTrashOpen}>
         <AlertDialogContent>

@@ -100,7 +100,8 @@ export function AlbumHeader({ album, coverId, meta, placeName, canEdit, isAdmin,
         <div className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/70 via-transparent to-transparent" />
       </div>
 
-      <div className="relative flex min-h-[260px] flex-col justify-end gap-4 p-5 sm:min-h-[320px] sm:p-8">
+      {/* Top padding keeps a long note or title clear of the button panel pinned to the top-right corner. */}
+      <div className="relative flex min-h-[260px] flex-col justify-end gap-4 p-5 pt-16 sm:min-h-[320px] sm:p-8 sm:pt-20">
         <div className="glass absolute right-3 top-3 flex items-center gap-1 rounded-2xl p-1 sm:right-4 sm:top-4">
           <StoryButton slides={slides} heading={album.title} musicUrl={album.hasMusic ? `/api/albums/${album.id}/music` : null} label={t("story")} variant="default" className="h-9 px-3" />
           {isAdmin ? (

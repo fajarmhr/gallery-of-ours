@@ -1,0 +1,3 @@
+Kode dan data wilayah administrasi Indonesia (Kepmendagri 2025).
+Source: https://github.com/cahyadsn/wilayah (db/wilayah.sql)
+Copyright (c) 2025 cahya dsn. Released under the MIT License.

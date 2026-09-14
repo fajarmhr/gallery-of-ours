@@ -10,7 +10,7 @@ import type { StorySlide } from "@/components/story/story-player";
 import { cloudinaryAccountOptions } from "@/lib/cloudinary";
 import { env } from "@/lib/env";
 import { dayKey, daysBetween, filmStamp, formatDateRange, mediaUrl } from "@/lib/format";
-import { canEditAlbum, isAdmin, isAlbumLocked } from "@/lib/permissions";
+import { canEditAlbum, isAdmin, isAlbumLocked, isSuperadmin } from "@/lib/permissions";
 import { getAlbum, getAlbumMedia, listAlbumsForMove, type MediaCard } from "@/lib/queries";
 import { requireActiveUser } from "@/lib/session";
 
@@ -118,11 +118,12 @@ export default async function AlbumPage({ params }: PageProps<"/albums/[albumId]
           hasMusic: Boolean(album.musicKey),
         }}
         coverId={cover?.id ?? null}
+        placeName={row.placeName}
         meta={meta}
         canEdit={canEdit}
         isAdmin={isAdmin(user)}
         itemCount={items.length}
-        cloudinaryAccounts={isAdmin(user) ? cloudinaryAccountOptions() : []}
+        cloudinaryAccounts={isSuperadmin(user) ? cloudinaryAccountOptions() : []}
         slides={slides}
       />
       {items.length === 0 ? (

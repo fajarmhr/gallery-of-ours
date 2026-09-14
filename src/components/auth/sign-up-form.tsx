@@ -1,9 +1,11 @@
 "use client";
 
-import { MailCheck } from "lucide-react";
+import { MailCheck, Unlink } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { signUpWithInvite } from "@/actions/invites";
 import { AuthHeadingClient } from "@/components/auth/forgot-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,13 +13,20 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage, fieldClass } from "./sign-in-form";
 
-export function SignUpForm() {
+/** The invite token from the link, already checked on the server. */
+export type SignUpInvite = { token: string; valid: boolean; invitedBy: string | null };
+
+export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) {
   const t = useTranslations("auth");
+  const ti = useTranslations("invites");
+  const te = useTranslations("errors");
   const locale = useLocale();
+  const router = useRouter();
   const [values, setValues] = useState({ name: "", username: "", email: "", password: "", relation: "" });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const invited = Boolean(invite?.valid);
 
   const set = (key: keyof typeof values) => (event: React.ChangeEvent<HTMLInputElement>) =>
     setValues((v) => ({ ...v, [key]: event.target.value }));
@@ -27,11 +36,28 @@ export function SignUpForm() {
     setPending(true);
     setError(null);
     const email = values.email.trim().toLowerCase();
+    const profile = { name: values.name.trim(), email, password: values.password, username: values.username.trim().toLowerCase() };
+
+    if (invite?.valid) {
+      const result = await signUpWithInvite({
+        ...profile,
+        token: invite.token,
+        relationNote: values.relation.trim() || null,
+        locale: locale === "id" ? "id" : "en",
+      });
+      if (!result.ok) {
+        setPending(false);
+        setError(result.error.startsWith("auth:") ? authErrorMessage(t, result.error.slice(5)) : te.has(result.error) ? te(result.error) : te("unknown"));
+        return;
+      }
+      // Stays "pending" while the next page loads, so the form can't be sent twice.
+      router.replace(result.data.signedIn ? "/home" : "/sign-in");
+      router.refresh();
+      return;
+    }
+
     const result = await authClient.signUp.email({
-      name: values.name.trim(),
-      email,
-      password: values.password,
-      username: values.username.trim().toLowerCase(),
+      ...profile,
       relationNote: values.relation.trim() || undefined,
       locale,
       callbackURL: "/pending",
@@ -42,6 +68,22 @@ export function SignUpForm() {
       return;
     }
     setSentTo(email);
+  }
+
+  if (invite && !invite.valid) {
+    return (
+      <div>
+        <AuthHeadingClient icon={<Unlink className="size-7" />} title={ti("invalidTitle")} lead={ti("invalidText")} />
+        <div className="flex flex-col gap-2">
+          <Button asChild className="h-11 w-full rounded-xl">
+            <Link href="/sign-up">{t("requestAccess")}</Link>
+          </Button>
+          <Button asChild variant="outline" className="h-11 w-full rounded-xl">
+            <Link href="/sign-in">{t("signIn")}</Link>
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (sentTo) {
@@ -57,7 +99,10 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <AuthHeadingClient title={t("requestAccess")} lead={t("requestLead")} />
+      <AuthHeadingClient
+        title={invited ? ti("signUpTitle") : t("requestAccess")}
+        lead={invited ? (invite?.invitedBy ? ti("signUpLead", { name: invite.invitedBy }) : ti("signUpLeadAnonymous")) : t("requestLead")}
+      />
       <Field id="name" label={t("name")}>
         <Input id="name" required autoComplete="name" placeholder={t("namePlaceholder")} value={values.name} onChange={set("name")} className={fieldClass} />
       </Field>
@@ -89,7 +134,7 @@ export function SignUpForm() {
         </p>
       ) : null}
       <Button type="submit" disabled={pending} className="mt-1 h-11 rounded-xl text-base">
-        {pending ? t("sending") : t("sendRequest")}
+        {invited ? (pending ? ti("joining") : ti("join")) : pending ? t("sending") : t("sendRequest")}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         {t("haveAccount")}{" "}

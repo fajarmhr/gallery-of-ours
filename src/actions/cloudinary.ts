@@ -18,7 +18,7 @@ import {
 } from "@/lib/cloudinary";
 import { env } from "@/lib/env";
 import { processMedia } from "@/lib/media-processing";
-import { assertAdmin, isAlbumLocked, PermissionError } from "@/lib/permissions";
+import { assertSuperadmin, isAlbumLocked, PermissionError } from "@/lib/permissions";
 import { actionUser } from "@/lib/session";
 
 /** Cloudinary problems an admin can act on get their own message; anything else is logged by `run`. */
@@ -32,7 +32,7 @@ function explainCloudinaryError(error: unknown): never {
 
 export async function browseCloudinaryFolder(accountId: string, path: string) {
   return run(async () => {
-    assertAdmin(await actionUser());
+    assertSuperadmin(await actionUser());
     const listing = await listCloudinaryFolder(accountId, path).catch(explainCloudinaryError);
 
     const publicIds = listing.assets.map((asset) => asset.publicId);
@@ -63,7 +63,7 @@ const ImportInput = z.object({
 export async function importFromCloudinary(input: z.input<typeof ImportInput>) {
   return run(async () => {
     const current = await actionUser();
-    assertAdmin(current);
+    assertSuperadmin(current);
     const parsed = ImportInput.safeParse(input);
     if (!parsed.success) throw new UserError("invalid_input");
     const { albumId, accountId, publicId, resourceType, fallbackDate } = parsed.data;

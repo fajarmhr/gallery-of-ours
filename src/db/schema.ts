@@ -98,9 +98,15 @@ export const places = pgTable("places", {
   id: uuid("id").primaryKey().defaultRandom(),
   key: text("key").notNull().unique(),
   name: text("name").notNull(),
+  /** Regency or city (kabupaten/kota). */
   city: text("city"),
+  /** Province. */
   region: text("region"),
   country: text("country"),
+  district: text("district"),
+  village: text("village"),
+  /** Kepmendagri code of a region picked by hand, e.g. "51.04.04.2001"; null for places found from GPS. */
+  regionCode: text("region_code"),
   lat: doublePrecision("lat").notNull(),
   lng: doublePrecision("lng").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -118,6 +124,8 @@ export const albums = pgTable(
     startDate: date("start_date", { mode: "string" }),
     endDate: date("end_date", { mode: "string" }),
     unlockAt: timestamp("unlock_at", { withTimezone: true }),
+    /** Where the album happened; used for photos and videos in it that have no location of their own. */
+    placeId: uuid("place_id").references(() => places.id, { onDelete: "set null" }),
     musicKey: text("music_key"),
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
     isDemo: boolean("is_demo").default(false).notNull(),
@@ -273,10 +281,25 @@ export const activity = pgTable(
   (t) => [index("activity_created_idx").on(t.createdAt)],
 );
 
+/** One-time sign-up links. Whoever signs up through one is approved and verified straight away. */
+export const invites = pgTable("invites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  token: text("token").notNull().unique(),
+  /** Who the link is for, e.g. "Tante Rina"; only admins see it. */
+  note: text("note"),
+  createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  usedById: text("used_by_id").references(() => user.id, { onDelete: "set null" }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 /* ───────────── Relations ───────────── */
 
 export const albumsRelations = relations(albums, ({ many, one }) => ({
   media: many(media),
+  place: one(places, { fields: [albums.placeId], references: [places.id] }),
   createdBy: one(user, { fields: [albums.createdById], references: [user.id] }),
   shareLinks: many(shareLinks),
 }));

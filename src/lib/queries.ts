@@ -1,9 +1,11 @@
-import { and, asc, desc, eq, gt, ilike, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, ilike, inArray, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
   albums,
   editGrants,
   favorites,
+  invites,
   media,
   milestones,
   places,
@@ -58,6 +60,9 @@ export type MediaCard = {
   originalName: string | null;
 };
 
+/** A photo's own place, or its album's place when it has none. Needs `albums` joined. */
+const placeOfMedia = sql`coalesce(${media.placeId}, ${albums.placeId})`;
+
 const cardColumns = {
   id: media.id,
   albumId: media.albumId,
@@ -83,7 +88,7 @@ const selectCards = () =>
     .select(cardColumns)
     .from(media)
     .innerJoin(albums, eq(media.albumId, albums.id))
-    .leftJoin(places, eq(media.placeId, places.id))
+    .leftJoin(places, sql`${places.id} = ${placeOfMedia}`)
     .leftJoin(user, eq(media.uploaderId, user.id));
 
 type CardRow = Awaited<ReturnType<typeof selectCards>>[number];
@@ -181,9 +186,10 @@ export async function getAlbumsOverview(viewerId: string, options: { category?: 
 
 export async function getAlbum(albumId: string) {
   const [row] = await db
-    .select({ album: albums, createdByName: user.name })
+    .select({ album: albums, createdByName: user.name, placeName: places.name })
     .from(albums)
     .leftJoin(user, eq(albums.createdById, user.id))
+    .leftJoin(places, eq(albums.placeId, places.id))
     .where(eq(albums.id, albumId))
     .limit(1);
   return row ?? null;
@@ -236,17 +242,36 @@ export async function getPlacesOverview(viewerId: string): Promise<PlaceOverview
       albumCount: sql<number>`count(distinct ${media.albumId})::int`,
       coverId: sql<string>`(array_agg(${media.id} order by ${media.takenAt} desc nulls last))[1]`,
     })
-    .from(places)
-    .innerJoin(media, eq(media.placeId, places.id))
+    .from(media)
     .innerJoin(albums, eq(media.albumId, albums.id))
+    .innerJoin(places, sql`${places.id} = ${placeOfMedia}`)
     .where(visibleMedia(viewerId))
     .groupBy(places.id)
     .orderBy(desc(sql`count(${media.id})`));
 }
 
+export type MapPoint = { id: string; placeId: string; lat: number; lng: number };
+
+/** Every visible photo and video with a location: at its own GPS point, or at the centre of its place. */
+export async function getMapPoints(viewerId: string): Promise<MapPoint[]> {
+  return db
+    .select({
+      id: media.id,
+      placeId: places.id,
+      lat: sql<number>`coalesce(${media.lat}, ${places.lat})`,
+      lng: sql<number>`coalesce(${media.lng}, ${places.lng})`,
+    })
+    .from(media)
+    .innerJoin(albums, eq(media.albumId, albums.id))
+    .innerJoin(places, sql`${places.id} = ${placeOfMedia}`)
+    .where(and(visibleMedia(viewerId), eq(media.status, "ready")))
+    .orderBy(desc(sortDate))
+    .limit(5000);
+}
+
 export async function getPlaceMedia(viewerId: string, placeId: string) {
   const rows = await selectCards()
-    .where(and(visibleMedia(viewerId), eq(media.placeId, placeId)))
+    .where(and(visibleMedia(viewerId), sql`${placeOfMedia} = ${placeId}`))
     .orderBy(desc(sortDate))
     .limit(300);
   return rows.map(toCard);
@@ -287,6 +312,9 @@ export async function searchMemories(viewerId: string, query: string) {
           sql`${media.aiTags}::text ilike ${pattern}`,
           ilike(places.name, pattern),
           ilike(places.city, pattern),
+          ilike(places.district, pattern),
+          ilike(places.village, pattern),
+          ilike(places.region, pattern),
           ilike(albums.title, pattern),
           ilike(media.originalName, pattern),
         ),
@@ -299,19 +327,29 @@ export async function searchMemories(viewerId: string, query: string) {
 
 /* ───────────── Home ───────────── */
 
-export async function getOnThisDay(viewerId: string, timeZone: string) {
-  const rows = await selectCards()
-    .where(
-      and(
-        visibleMedia(viewerId),
-        eq(media.status, "ready"),
-        sql`to_char(${media.takenAt} at time zone ${timeZone}, 'MM-DD') = to_char(now() at time zone ${timeZone}, 'MM-DD')`,
-        sql`extract(year from ${media.takenAt} at time zone ${timeZone}) < extract(year from now() at time zone ${timeZone})`,
-      ),
-    )
-    .orderBy(desc(media.takenAt), asc(media.createdAt))
-    .limit(80);
-  return rows.map(toCard);
+export type MemoryLevel = "day" | "thisMonth" | "lastMonth" | "thisYear";
+
+/**
+ * Memories for Home: photos taken on this date in earlier years. When there are none, photos from this month, then last
+ * month (both from any year), then this year.
+ */
+export async function getMemories(viewerId: string, timeZone: string): Promise<{ level: MemoryLevel; items: MediaCard[] }> {
+  const taken = sql`(${media.takenAt} at time zone ${timeZone})`;
+  const today = sql`(now() at time zone ${timeZone})`;
+  const levels: [MemoryLevel, SQL][] = [
+    ["day", sql`to_char(${taken}, 'MM-DD') = to_char(${today}, 'MM-DD') and extract(year from ${taken}) < extract(year from ${today})`],
+    ["thisMonth", sql`extract(month from ${taken}) = extract(month from ${today})`],
+    ["lastMonth", sql`extract(month from ${taken}) = extract(month from ${today} - interval '1 month')`],
+    ["thisYear", sql`extract(year from ${taken}) = extract(year from ${today})`],
+  ];
+  for (const [level, condition] of levels) {
+    const rows = await selectCards()
+      .where(and(visibleMedia(viewerId), eq(media.status, "ready"), lte(media.takenAt, sql`now()`), condition))
+      .orderBy(desc(media.takenAt), asc(media.createdAt))
+      .limit(80);
+    if (rows.length) return { level, items: rows.map(toCard) };
+  }
+  return { level: "day", items: [] };
 }
 
 export async function getRecentMedia(viewerId: string, limit = 12) {
@@ -379,6 +417,34 @@ export async function getMembers() {
       grant: grant ? { albumId: grant.albumId, albumTitle: grant.albumTitle, expiresAt: grant.expiresAt?.toISOString() ?? null } : null,
     };
   });
+}
+
+/** Invite links that still work, plus the ones used in the last 30 days. */
+export async function getInvites() {
+  const joined = alias(user, "joined_user");
+  const now = new Date();
+  const rows = await db
+    .select({
+      id: invites.id,
+      token: invites.token,
+      note: invites.note,
+      expiresAt: invites.expiresAt,
+      usedAt: invites.usedAt,
+      usedByName: joined.name,
+      createdByName: user.name,
+    })
+    .from(invites)
+    .leftJoin(user, eq(invites.createdById, user.id))
+    .leftJoin(joined, eq(invites.usedById, joined.id))
+    .where(
+      and(
+        isNull(invites.revokedAt),
+        or(and(isNull(invites.usedAt), gt(invites.expiresAt, now)), gte(invites.usedAt, new Date(now.getTime() - 30 * 86_400_000))),
+      ),
+    )
+    .orderBy(desc(invites.createdAt))
+    .limit(50);
+  return rows.map((row) => ({ ...row, expiresAt: row.expiresAt.toISOString(), usedAt: row.usedAt?.toISOString() ?? null }));
 }
 
 /* ───────────── Trash ───────────── */

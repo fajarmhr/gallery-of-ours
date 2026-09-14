@@ -13,7 +13,7 @@ import { count, isNull } from "drizzle-orm";
 import { env } from "@/lib/env";
 import { dayKey, filmStamp, mediaUrl, yearsSince } from "@/lib/format";
 import { canCreateAlbum, isAdmin } from "@/lib/permissions";
-import { getOnThisDay, getPendingUsers, getRecapYears, getRecentMedia, getUpcoming } from "@/lib/queries";
+import { getMemories, getPendingUsers, getRecapYears, getRecentMedia, getUpcoming } from "@/lib/queries";
 import { requireActiveUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Home" };
@@ -21,6 +21,7 @@ export const metadata: Metadata = { title: "Home" };
 export default async function HomePage() {
   const user = await requireActiveUser();
   const t = await getTranslations("home");
+  const tm = await getTranslations("memories");
   const tn = await getTranslations("nav");
   const ts = await getTranslations("story");
   const format = await getFormatter();
@@ -28,9 +29,9 @@ export default async function HomePage() {
   const timeZone = env.timeZone;
   const admin = isAdmin(user);
 
-  const [[albumCount], onThisDay, upcoming, recent, pending, years] = await Promise.all([
+  const [[albumCount], found, upcoming, recent, pending, years] = await Promise.all([
     db.select({ value: count() }).from(albums).where(isNull(albums.deletedAt)),
-    getOnThisDay(user.id, timeZone),
+    getMemories(user.id, timeZone),
     getUpcoming(60),
     getRecentMedia(user.id, 10),
     admin ? getPendingUsers() : Promise.resolve([]),
@@ -56,10 +57,16 @@ export default async function HomePage() {
     );
   }
 
-  const newestYear = onThisDay[0] ? dayKey(onThisDay[0].takenAt!, timeZone).slice(0, 4) : null;
-  const memories = newestYear ? onThisDay.filter((m) => dayKey(m.takenAt!, timeZone).startsWith(newestYear)) : [];
+  // The hero shows one year at a time: the newest year among the memories found.
+  const newestYear = found.items[0] ? dayKey(found.items[0].takenAt!, timeZone).slice(0, 4) : null;
+  const memories = newestYear ? found.items.filter((m) => dayKey(m.takenAt!, timeZone).startsWith(newestYear)) : [];
   const hero = memories[0];
   const yearsAgo = hero ? yearsSince(dayKey(hero.takenAt!, timeZone), new Date()) : 0;
+  const onThisDay = found.level === "day";
+  const memoryHeading = onThisDay ? ts("onThisDay") : tm(found.level);
+  const memoryWhen = onThisDay
+    ? t("yearsAgo", { count: yearsAgo })
+    : [tm(found.level), yearsAgo > 0 ? tm("yearsAgo", { count: yearsAgo }) : null].filter(Boolean).join(" · ");
   const memorySlides: StorySlide[] = memories.map((m) => ({
     key: m.id,
     image: mediaUrl(m.id, "large"),
@@ -81,14 +88,18 @@ export default async function HomePage() {
             <div className="relative mt-auto flex w-full flex-wrap items-end justify-between gap-4 p-6">
               <div>
                 <p className="date-stamp mb-2 text-sm">
-                  {filmStamp(hero.takenAt!, timeZone)} · {t("yearsAgo", { count: yearsAgo })}
+                  {filmStamp(hero.takenAt!, timeZone)} · {memoryWhen}
                 </p>
                 <h2 className="max-w-[18ch] text-balance font-display text-3xl font-extrabold leading-none tracking-tight sm:text-4xl">
                   {hero.caption ?? (locale === "id" ? hero.aiCaption?.id : hero.aiCaption?.en) ?? hero.albumTitle}
                 </h2>
-                <p className="mt-2 text-sm text-white/85">{t("fromAlbum", { album: hero.albumTitle ?? "", count: memories.length })}</p>
+                <p className="mt-2 text-sm text-white/85">
+                  {onThisDay
+                    ? t("fromAlbum", { album: hero.albumTitle ?? "", count: memories.length })
+                    : tm("photos", { album: hero.albumTitle ?? "", count: memories.length })}
+                </p>
               </div>
-              <StoryButton slides={memorySlides} heading={ts("onThisDay")} label={t("relive")} variant="secondary" />
+              <StoryButton slides={memorySlides} heading={memoryHeading} label={t("relive")} variant="secondary" />
             </div>
           </section>
         ) : (

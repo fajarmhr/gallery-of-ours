@@ -12,12 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { isSupportedFile, prepareFile, putWithProgress, type PreparedFile } from "./prepare-file";
+import { isSupportedFile, postWithProgress, prepareFile, putWithProgress, type PreparedFile } from "./prepare-file";
 
 type Stage = "reading" | "converting" | "uploading" | "finishing" | "done" | "failed";
 type QueueItem = { clientId: string; name: string; stage: Stage; progress: number; prepared?: PreparedFile; error?: string };
-type Job = { clientId: string; file: File; albumId: string };
+type Job = { clientId: string; file: File; albumId: string; storageId: string };
 type UploadAlbum = { id: string; title: string };
+/** A Cloudinary account files can be stored in instead of R2. */
+export type StorageOption = { id: string; label: string };
 
 const UploadContext = createContext<{ open: (albumId?: string) => void } | null>(null);
 
@@ -27,24 +29,31 @@ export function useUpload() {
   return value;
 }
 
+/** Files prepared and uploaded at the same time. */
 const CONCURRENCY = 3;
+/** R2, the default storage. */
+const PRIMARY_STORAGE = "primary";
 
 export function UploadProvider({
   albums,
   canCreateAlbum,
+  storageOptions,
   children,
 }: {
   albums: UploadAlbum[];
   canCreateAlbum: boolean;
+  storageOptions: StorageOption[];
   children: React.ReactNode;
 }) {
   const t = useTranslations("upload");
+  const ts = useTranslations("storage");
   const te = useTranslations("errors");
   const format = useFormatter();
   const router = useRouter();
 
   const [isOpen, setOpen] = useState(false);
   const [albumId, setAlbumId] = useState("");
+  const [storageId, setStorageId] = useState(PRIMARY_STORAGE);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,47 +81,59 @@ export function UploadProvider({
   const update = (clientId: string, patch: Partial<QueueItem>) =>
     setQueue((items) => items.map((item) => (item.clientId === clientId ? { ...item, ...patch } : item)));
 
-  async function runJob({ clientId, file, albumId: target }: Job) {
+  async function runJob({ clientId, file, albumId: target, storageId: store }: Job) {
     try {
       const prepared = await prepareFile(file, (stage) => update(clientId, { stage }));
       update(clientId, { prepared, stage: "uploading", progress: 0 });
 
-      const started = await startUploads(target, [
-        {
-          clientId,
-          name: prepared.name,
-          mime: prepared.mime,
-          size: prepared.size,
-          type: prepared.type,
-          width: prepared.width,
-          height: prepared.height,
-          durationSec: prepared.durationSec,
-          takenAt: prepared.takenAt,
-          lat: prepared.lat,
-          lng: prepared.lng,
-          thumbhash: prepared.thumbhash,
-          hasDisplay: Boolean(prepared.display),
-          hasPoster: Boolean(prepared.poster),
-        },
-      ]);
+      const started = await startUploads(
+        target,
+        [
+          {
+            clientId,
+            name: prepared.name,
+            mime: prepared.mime,
+            size: prepared.size,
+            type: prepared.type,
+            width: prepared.width,
+            height: prepared.height,
+            durationSec: prepared.durationSec,
+            takenAt: prepared.takenAt,
+            lat: prepared.lat,
+            lng: prepared.lng,
+            thumbhash: prepared.thumbhash,
+            hasDisplay: Boolean(prepared.display),
+            hasPoster: Boolean(prepared.poster),
+          },
+        ],
+        store,
+      );
       if (!started.ok) throw new Error(started.error);
       const targets = started.data[0]!;
 
-      const total = file.size + (prepared.display?.size ?? 0) + (prepared.poster?.size ?? 0);
-      let sent = 0;
-      const send = async (to: { url: string; headers: Record<string, string> } | undefined, blob: Blob | null) => {
-        if (!to || !blob) return;
-        await putWithProgress(to, blob, (fraction) =>
-          update(clientId, { progress: Math.min(99, Math.round(((sent + fraction * blob.size) / total) * 100)) }),
+      let uploaded: { publicId: string } | undefined;
+      if (targets.cloudinary) {
+        const answer = await postWithProgress(targets.cloudinary, file, (fraction) =>
+          update(clientId, { progress: Math.min(99, Math.round(fraction * 100)) }),
         );
-        sent += blob.size;
-      };
-      await send(targets.poster, prepared.poster);
-      await send(targets.display, prepared.display);
-      await send(targets.original, file);
+        uploaded = { publicId: typeof answer.public_id === "string" ? answer.public_id : "" };
+      } else {
+        const total = file.size + (prepared.display?.size ?? 0) + (prepared.poster?.size ?? 0);
+        let sent = 0;
+        const send = async (to: { url: string; headers: Record<string, string> } | undefined, blob: Blob | null) => {
+          if (!to || !blob) return;
+          await putWithProgress(to, blob, (fraction) =>
+            update(clientId, { progress: Math.min(99, Math.round(((sent + fraction * blob.size) / total) * 100)) }),
+          );
+          sent += blob.size;
+        };
+        await send(targets.poster, prepared.poster);
+        await send(targets.display, prepared.display);
+        await send(targets.original, file);
+      }
 
       update(clientId, { stage: "finishing", progress: 100 });
-      const done = await finishUpload(targets.mediaId);
+      const done = await finishUpload(targets.mediaId, uploaded);
       if (!done.ok) throw new Error(done.error);
       update(clientId, { stage: "done" });
       finished.current += 1;
@@ -148,9 +169,12 @@ export function UploadProvider({
       toast.error(te("unsupported_file"));
       return;
     }
-    const items = accepted.map((file) => ({ clientId: crypto.randomUUID(), name: file.name, stage: "reading" as Stage, progress: 0 }));
+    const store = storageOptions.some((option) => option.id === storageId) ? storageId : PRIMARY_STORAGE;
+    // crypto.randomUUID only exists on https and localhost, not when the dev server is opened over Tailscale or the LAN.
+    const newId = () => (typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+    const items = accepted.map((file) => ({ clientId: newId(), name: file.name, stage: "reading" as Stage, progress: 0 }));
     setQueue((current) => [...items, ...current]);
-    accepted.forEach((file, i) => jobs.current.push({ clientId: items[i]!.clientId, file, albumId }));
+    accepted.forEach((file, i) => jobs.current.push({ clientId: items[i]!.clientId, file, albumId, storageId: store }));
     pump();
   }
 
@@ -196,6 +220,26 @@ export function UploadProvider({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {storageOptions.length > 0 ? (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-semibold">{ts("label")}</span>
+                    <Select value={storageId} onValueChange={setStorageId}>
+                      <SelectTrigger className="h-11 w-full rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={PRIMARY_STORAGE}>{ts("r2")}</SelectItem>
+                        {storageOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {storageId !== PRIMARY_STORAGE ? <p className="text-xs text-muted-foreground">{ts("cloudinaryHint")}</p> : null}
+                  </div>
+                ) : null}
 
                 <div
                   onDragOver={(event) => {

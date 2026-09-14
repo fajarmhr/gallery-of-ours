@@ -22,6 +22,11 @@ export const isHeicFile = (file: File) => /\.(heic|heif)$/i.test(file.name) || /
 export const isSupportedFile = (file: File) =>
   file.type.startsWith("image/") || file.type.startsWith("video/") || isHeicFile(file);
 
+const finite = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
+
+/** The file's modified time, when the browser reports a real one. */
+const modifiedAt = (file: File) => (file.lastModified > 0 ? new Date(file.lastModified).toISOString() : null);
+
 const toBase64 = (bytes: Uint8Array) => {
   let binary = "";
   bytes.forEach((b) => (binary += String.fromCharCode(b)));
@@ -123,7 +128,7 @@ export async function prepareFile(file: File, onStage?: (stage: "reading" | "con
       width: video.width,
       height: video.height,
       durationSec: video.duration,
-      takenAt: new Date(file.lastModified).toISOString(),
+      takenAt: modifiedAt(file),
       lat: null,
       lng: null,
       thumbhash,
@@ -140,9 +145,12 @@ export async function prepareFile(file: File, onStage?: (stage: "reading" | "con
     const exif = await exifr.parse(file, { tiff: true, exif: true, gps: true, xmp: false, icc: false, iptc: false, jfif: false, ihdr: false });
     const date: unknown = exif?.DateTimeOriginal ?? exif?.CreateDate;
     if (date instanceof Date && !Number.isNaN(date.getTime())) takenAt = date.toISOString();
-    if (typeof exif?.latitude === "number" && typeof exif?.longitude === "number") {
-      lat = exif.latitude;
-      lng = exif.longitude;
+    // Phones without a GPS fix can write empty 0/0 values, which read as NaN or as the 0,0 point off Africa.
+    const latitude = finite(exif?.latitude);
+    const longitude = finite(exif?.longitude);
+    if (latitude !== null && longitude !== null && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180 && (latitude !== 0 || longitude !== 0)) {
+      lat = latitude;
+      lng = longitude;
     }
   } catch {
     // Photos without EXIF are fine.
@@ -164,8 +172,10 @@ export async function prepareFile(file: File, onStage?: (stage: "reading" | "con
   let height: number | null = null;
   let thumbhash: string | null = null;
   try {
-    ({ width, height } = await imageSize(source));
-    thumbhash = await thumbhashOf(source, width, height);
+    const size = await imageSize(source);
+    width = size.width || null;
+    height = size.height || null;
+    if (width && height) thumbhash = await thumbhashOf(source, width, height);
   } catch {
     // Unreadable in this browser; the server still processes the original.
   }
@@ -176,7 +186,7 @@ export async function prepareFile(file: File, onStage?: (stage: "reading" | "con
     width,
     height,
     durationSec: null,
-    takenAt: takenAt ?? new Date(file.lastModified).toISOString(),
+    takenAt: takenAt ?? modifiedAt(file),
     lat,
     lng,
     thumbhash,
@@ -197,5 +207,32 @@ export function putWithProgress(target: { url: string; headers: Record<string, s
     xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("upload_missing")));
     xhr.onerror = () => reject(new Error("network"));
     xhr.send(body);
+  });
+}
+
+/** POSTs a file to a signed Cloudinary upload form and resolves with Cloudinary's JSON answer. */
+export function postWithProgress(target: { url: string; fields: Record<string, string> }, file: Blob, onProgress: (fraction: number) => void) {
+  return new Promise<Record<string, unknown>>((resolve, reject) => {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(target.fields)) form.append(key, value);
+    form.append("file", file);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", target.url);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      let body: Record<string, unknown> = {};
+      try {
+        body = JSON.parse(xhr.responseText) as Record<string, unknown>;
+      } catch {
+        // Not JSON; treated as a failed upload below.
+      }
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(body);
+      const message = String((body.error as { message?: unknown } | undefined)?.message ?? "");
+      reject(new Error(/file size too large/i.test(message) ? "cloudinary_too_large" : "cloudinary_upload_failed"));
+    };
+    xhr.onerror = () => reject(new Error("network"));
+    xhr.send(form);
   });
 }

@@ -8,6 +8,7 @@ import {
   FolderInput,
   Heart,
   ImagePlus,
+  MapPin,
   MessageCircle,
   Trash2,
   X,
@@ -20,6 +21,7 @@ import { toast } from "sonner";
 import { setAlbumCover } from "@/actions/albums";
 import { moveMedia, trashMedia } from "@/actions/media";
 import { getMediaSocial, toggleFavorite, type MediaSocial } from "@/actions/social";
+import { LocationDialog } from "@/components/location/location-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,12 +58,14 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   const tc = useTranslations("common");
   const ta = useTranslations("albums");
   const te = useTranslations("errors");
+  const tl = useTranslations("location");
   const format = useFormatter();
   const locale = useLocale();
   const router = useRouter();
 
   const [direction, setDirection] = useState(0);
   const [panelOpen, setPanelOpen] = useState(() => !readOnly && window.matchMedia("(min-width: 1024px)").matches);
+  const [locationOpen, setLocationOpen] = useState(false);
   const [socialState, setSocialState] = useState<{ id: string; data: MediaSocial } | null>(null);
   const [socialVersion, setSocialVersion] = useState(0);
   const social = socialState?.id === item.id ? socialState.data : null;
@@ -78,14 +82,15 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.target as HTMLElement)?.closest("input, textarea")) return;
+      // The location dialog handles its own keys, including Escape.
+      if (locationOpen || (event.target as HTMLElement)?.closest("input, textarea")) return;
       if (event.key === "Escape") onClose();
       if (event.key === "ArrowRight") go(1);
       if (event.key === "ArrowLeft") go(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, onClose]);
+  }, [go, onClose, locationOpen]);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -209,6 +214,10 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
                       {ta("setCover")}
                     </DropdownMenuItem>
                   ) : null}
+                  <DropdownMenuItem onSelect={() => setLocationOpen(true)}>
+                    <MapPin />
+                    {tl("button")}
+                  </DropdownMenuItem>
                   {moveTargets && moveTargets.length > 1 ? (
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
@@ -318,6 +327,10 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
           </motion.aside>
         ) : null}
       </AnimatePresence>
+
+      {social?.canEdit ? (
+        <LocationDialog target={{ kind: "media", id: item.id }} open={locationOpen} onOpenChange={setLocationOpen} onSaved={() => router.refresh()} />
+      ) : null}
     </motion.div>
   );
 }

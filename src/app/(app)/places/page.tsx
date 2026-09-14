@@ -7,7 +7,7 @@ import { MediaGallery } from "@/components/media/media-grid";
 import { PlacesMap } from "@/components/places/places-map";
 import { Button } from "@/components/ui/button";
 import { mediaUrl } from "@/lib/format";
-import { getPlaceMedia, getPlacesOverview } from "@/lib/queries";
+import { getMapPoints, getPlaceMedia, getPlacesOverview } from "@/lib/queries";
 import { requireActiveUser } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
   const params = await searchParams;
   const t = await getTranslations("places");
   const tc = await getTranslations("common");
-  const places = await getPlacesOverview(user.id);
+  const [places, points] = await Promise.all([getPlacesOverview(user.id), getMapPoints(user.id)]);
 
   if (places.length === 0) {
     return (
@@ -46,10 +46,7 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
       </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <PlacesMap
-          selectedId={selected?.id ?? null}
-          places={places.map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, count: p.count, coverUrl: mediaUrl(p.coverId, "thumb") }))}
-        />
+        <PlacesMap selectedId={selected?.id ?? null} points={points} />
         <ul className="flex max-h-[540px] flex-col gap-1 overflow-y-auto">
           {places.map((place) => (
             <li key={place.id}>

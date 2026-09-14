@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BottomBar } from "@/components/layout/bottom-bar";
 import { Topbar } from "@/components/layout/topbar";
 import { UploadProvider } from "@/components/upload/upload-context";
+import { cloudinaryAccountOptions } from "@/lib/cloudinary";
 import { editableScope, isAdmin } from "@/lib/permissions";
 import { requireActiveUser } from "@/lib/session";
 
@@ -42,7 +43,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const sinceYear = process.env.NEXT_PUBLIC_FAMILY_SINCE;
 
   return (
-    <UploadProvider albums={uploadAlbums} canCreateAlbum={scope === "all"}>
+    <UploadProvider
+      albums={uploadAlbums}
+      canCreateAlbum={scope === "all"}
+      storageOptions={uploadAlbums.length ? cloudinaryAccountOptions() : []}
+    >
       <div className="flex min-h-dvh">
         <AppSidebar
           user={{ name: user.name, image: user.image, role: user.role }}

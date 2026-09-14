@@ -52,7 +52,7 @@ export const isCloudinarySource = (source: string) => source.startsWith(PREFIX);
 export const cloudinarySource = (cloudName: string) => `${PREFIX}${cloudName}`;
 
 export const cloudinaryAccountOptions = (): CloudinaryAccountOption[] =>
-  env.cloudinary.map((account) => ({ id: account.cloudName, label: account.cloudName }));
+  env.cloudinary.map((account, index) => ({ id: account.cloudName, label: `Cloudinary ${index + 1} · ${account.cloudName}` }));
 
 function accountFor(cloudName: string) {
   const account = env.cloudinary.find((a) => a.cloudName === cloudName);
@@ -241,26 +241,32 @@ export async function readCloudinaryAsset(cloudName: string, publicId: string, r
   };
 }
 
+/** Generates every size the app shows for an authenticated asset, because those can't be transformed on the fly. */
+async function generateSizes(account: CloudinaryAccount, publicId: string, resourceType: CloudinaryResourceType) {
+  const video = resourceType === "video";
+  const result = await call(() =>
+    cloudinary.uploader.explicit(publicId, {
+      ...credentials(account),
+      resource_type: resourceType,
+      type: "authenticated",
+      eager: Object.values(SIZES).map((size) => ({ ...stillTransformation(size, video), format: DERIVED_FORMAT })),
+      eager_async: video,
+    }),
+  );
+  return result as unknown as Record<string, unknown>;
+}
+
 /**
- * Switches a public asset to authenticated delivery (old public links stop working) and generates every size the app
- * shows, because authenticated assets can't be transformed on the fly. Reverts the switch if generating fails.
+ * Switches a public asset to authenticated delivery (old public links stop working) and generates its sizes.
+ * Reverts the switch if generating fails.
  */
 export async function makeCloudinaryAssetPrivate(cloudName: string, publicId: string, resourceType: CloudinaryResourceType) {
   const account = accountFor(cloudName);
-  const video = resourceType === "video";
   const toPrivate = { ...credentials(account), resource_type: resourceType, type: "upload" as const, to_type: "authenticated" as const, invalidate: true };
   await call(() => cloudinary.uploader.rename(publicId, publicId, toPrivate));
 
   try {
-    await call(() =>
-      cloudinary.uploader.explicit(publicId, {
-        ...credentials(account),
-        resource_type: resourceType,
-        type: "authenticated",
-        eager: Object.values(SIZES).map((size) => ({ ...stillTransformation(size, video), format: DERIVED_FORMAT })),
-        eager_async: video,
-      }),
-    );
+    await generateSizes(account, publicId, resourceType);
   } catch (error) {
     const toPublic = { ...toPrivate, type: "authenticated" as const, to_type: "upload" as const };
     await call(() => cloudinary.uploader.rename(publicId, publicId, toPublic)).catch((undoError) =>
@@ -268,6 +274,36 @@ export async function makeCloudinaryAssetPrivate(cloudName: string, publicId: st
     );
     throw error;
   }
+}
+
+/* ───────────── Uploading from the browser ───────────── */
+
+/** Folder new uploads go into, so they're easy to find in the Cloudinary console. */
+const UPLOAD_FOLDER = "gallery-of-ours";
+
+export type CloudinaryUploadTarget = { url: string; fields: Record<string, string> };
+
+/** Signed form fields for a private upload straight from the browser; the file never passes through our server. */
+export function cloudinaryUploadTarget(cloudName: string, item: Pick<MediaRow, "id" | "type">): CloudinaryUploadTarget {
+  const account = accountFor(cloudName);
+  const params = { timestamp: String(Math.floor(Date.now() / 1000)), public_id: item.id, folder: UPLOAD_FOLDER, type: "authenticated" };
+  return {
+    url: `https://api.cloudinary.com/v1_1/${encodeURIComponent(account.cloudName)}/${resourceTypeOf(item)}/upload`,
+    fields: { ...params, api_key: account.apiKey, signature: cloudinary.utils.api_sign_request(params, account.apiSecret) },
+  };
+}
+
+/**
+ * Confirms a browser upload arrived (Cloudinary answers 404 when it didn't) and generates its sizes. The public_id must be
+ * the one that was signed, with or without the upload folder in front, which depends on the account's folder mode.
+ */
+export async function finishCloudinaryUpload(item: Pick<MediaRow, "id" | "source" | "type">, publicId: string) {
+  if (publicId !== item.id && publicId !== `${UPLOAD_FOLDER}/${item.id}`) {
+    throw new CloudinaryError(`Upload for ${item.id} came back as "${publicId}"`, 400);
+  }
+  const result = await generateSizes(accountFor(item.source.slice(PREFIX.length)), publicId, resourceTypeOf(item));
+  const numberOf = (key: string) => (typeof result[key] === "number" ? (result[key] as number) : null);
+  return { bytes: numberOf("bytes"), width: numberOf("width"), height: numberOf("height"), durationSec: numberOf("duration") };
 }
 
 /* ───────────── Metadata ───────────── */

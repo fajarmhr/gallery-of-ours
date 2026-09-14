@@ -1,11 +1,12 @@
 "use client";
 
-import { CloudDownload, Download, Ellipsis, Music, Pencil, Share2, Trash2, Upload } from "lucide-react";
+import { CloudDownload, Download, Ellipsis, MapPin, Music, Pencil, Share2, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { finishAlbumMusicUpload, removeAlbumMusic, startAlbumMusicUpload, trashAlbum } from "@/actions/albums";
+import { LocationDialog } from "@/components/location/location-dialog";
 import { StoryButton, type StorySlide } from "@/components/story/story-player";
 import {
   AlertDialog,
@@ -46,27 +47,31 @@ type Props = {
   };
   coverId: string | null;
   meta: string;
+  /** Where the album happened, used for its photos without a location of their own. */
+  placeName: string | null;
   canEdit: boolean;
   isAdmin: boolean;
   itemCount: number;
   slides: StorySlide[];
-  /** Cloudinary accounts an admin can import from; empty for everyone else. */
+  /** Cloudinary accounts a superadmin can import from; empty for everyone else. */
   cloudinaryAccounts: CloudinaryAccountOption[];
 };
 
-export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount, slides, cloudinaryAccounts }: Props) {
+export function AlbumHeader({ album, coverId, meta, placeName, canEdit, isAdmin, itemCount, slides, cloudinaryAccounts }: Props) {
   const t = useTranslations("albums");
   const tc = useTranslations("common");
   const te = useTranslations("errors");
   const tcl = useTranslations("cloudinary");
+  const tl = useTranslations("location");
   const router = useRouter();
   const { open: openUpload } = useUpload();
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [cloudinaryOpen, setCloudinaryOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
   const musicInput = useRef<HTMLInputElement>(null);
-  const canImport = canEdit && isAdmin && cloudinaryAccounts.length > 0;
+  const canImport = canEdit && cloudinaryAccounts.length > 0;
 
   const fail = (code: string) => toast.error(te.has(code) ? te(code) : te("unknown"));
 
@@ -120,6 +125,10 @@ export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount,
                   <Pencil />
                   {t("editTitle")}
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setLocationOpen(true)}>
+                  <MapPin />
+                  {tl("button")}
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => musicInput.current?.click()}>
                   <Music />
                   {album.hasMusic ? t("replaceMusic") : t("addMusic")}
@@ -151,6 +160,12 @@ export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount,
           {album.note ? <p className="mb-1 inline-block origin-left -rotate-2 font-hand text-2xl text-[#ffd3a8] sm:text-3xl">{album.note}</p> : null}
           <h1 className="text-balance font-display text-4xl font-extrabold leading-[0.98] tracking-tight sm:text-5xl">{album.title}</h1>
           <p className="mt-2 text-sm text-white/85 sm:text-base">{meta}</p>
+          {placeName ? (
+            <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-white/85">
+              <MapPin className="size-4 shrink-0" />
+              {placeName}
+            </p>
+          ) : null}
           {album.description ? <p className="mt-3 max-w-[60ch] text-pretty text-sm text-white/80">{album.description}</p> : null}
         </div>
 
@@ -160,6 +175,12 @@ export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount,
               <Upload />
               {t("addPhotos")}
             </Button>
+            {placeName ? null : (
+              <Button variant="ghost" onClick={() => setLocationOpen(true)} className="glass h-10 rounded-xl px-4 text-white hover:bg-white/25 hover:text-white">
+                <MapPin />
+                {tl("button")}
+              </Button>
+            )}
             {canImport ? (
               <Button variant="ghost" onClick={() => setCloudinaryOpen(true)} className="glass h-10 rounded-xl px-4 text-white hover:bg-white/25 hover:text-white">
                 <CloudDownload />
@@ -198,6 +219,9 @@ export function AlbumHeader({ album, coverId, meta, canEdit, isAdmin, itemCount,
             unlockAt: album.unlockAt ? album.unlockAt.slice(0, 10) : "",
           }}
         />
+      ) : null}
+      {canEdit ? (
+        <LocationDialog target={{ kind: "album", id: album.id }} open={locationOpen} onOpenChange={setLocationOpen} onSaved={() => router.refresh()} />
       ) : null}
       {isAdmin ? <ShareDialog albumId={album.id} open={shareOpen} onOpenChange={setShareOpen} /> : null}
       {canImport ? <CloudinaryImportDialog albumId={album.id} accounts={cloudinaryAccounts} open={cloudinaryOpen} onOpenChange={setCloudinaryOpen} /> : null}

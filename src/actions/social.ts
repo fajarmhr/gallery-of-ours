@@ -24,6 +24,8 @@ export type MediaSocial = {
   favorited: boolean;
   canEdit: boolean;
   reactions: { kind: ReactionKind; count: number; mine: boolean; names: string[] }[];
+  /** Everyone else who reacted, each name once. */
+  reactedBy: string[];
   comments: { id: string; body: string; createdAt: string; userId: string; name: string; image: string | null; canDelete: boolean }[];
   /** Server time when this was fetched — the reference for comment relative times (fetched client-side, after page load). */
   now: string;
@@ -58,6 +60,7 @@ export async function getMediaSocial(mediaId: string) {
         const list = reactionRows.filter((r) => r.kind === kind);
         return { kind, count: list.length, mine: list.some((r) => r.userId === current.id), names: list.map((r) => r.name) };
       }),
+      reactedBy: [...new Set(reactionRows.filter((r) => r.userId !== current.id).map((r) => r.name))],
       comments: commentRows.map((c) => ({
         ...c,
         createdAt: c.createdAt.toISOString(),

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { places } from "@/db/schema";
 import { env } from "@/lib/env";
-import type { AddressParts } from "@/lib/regions";
+import { normalizeRegionName, type AddressParts } from "@/lib/regions";
 
 type PlaceInfo = {
   name: string | null;
@@ -11,6 +11,7 @@ type PlaceInfo = {
   country: string | null;
   district: string | null;
   village: string | null;
+  hamlet: string | null;
 };
 type OsmAddress = Record<string, string | undefined>;
 
@@ -24,6 +25,9 @@ const VILLAGE_KEYS = ["village", "suburb", "quarter", "neighbourhood", "hamlet",
 
 const valuesOf = (address: OsmAddress, keys: string[]) =>
   [...new Set(keys.map((key) => address[key]).filter((value): value is string => Boolean(value)))];
+
+/** OpenStreetMap files a dusun as a hamlet; one that only stands in for a missing village isn't a dusun. */
+const hamletOf = (address: OsmAddress, village: string | null) => (address.hamlet && address.hamlet !== village ? address.hamlet : null);
 
 let nextSlot = 0;
 
@@ -52,17 +56,25 @@ async function reverseGeocode(lat: number, lng: number): Promise<PlaceInfo | nul
   const a = data.address ?? {};
   const city = a.city ?? a.town ?? a.village ?? a.municipality ?? a.county ?? null;
   const name = data.name || a.suburb || a.neighbourhood || city || a.state || null;
+  const village = valuesOf(a, VILLAGE_KEYS)[0] ?? null;
   return {
     name,
     city,
     region: a.state ?? null,
     country: a.country ?? null,
     district: valuesOf(a, DISTRICT_KEYS)[0] ?? null,
-    village: valuesOf(a, VILLAGE_KEYS)[0] ?? null,
+    village,
+    hamlet: hamletOf(a, village),
   };
 }
 
-export type ReverseAddress = { countryCode: string | null; country: string | null; address: AddressParts };
+export type ReverseAddress = {
+  countryCode: string | null;
+  country: string | null;
+  address: AddressParts;
+  /** A dusun OpenStreetMap has at the spot; it can still repeat the village name. */
+  hamlet: string | null;
+};
 
 /** The administrative areas around a point, for matching against the Indonesian region list. */
 export async function reverseAddress(lat: number, lng: number): Promise<ReverseAddress | null> {
@@ -78,6 +90,7 @@ export async function reverseAddress(lat: number, lng: number): Promise<ReverseA
       district: valuesOf(address, DISTRICT_KEYS),
       village: valuesOf(address, VILLAGE_KEYS),
     },
+    hamlet: hamletOf(address, address.village ?? null),
   };
 }
 
@@ -117,6 +130,55 @@ export async function searchPlaces(query: string): Promise<PlaceSearchResult[]> 
   return [...results.values()];
 }
 
+export type HamletArea = { code: string; village: string; district: string; regency: string; province: string };
+
+const hamletCache = new Map<string, string[]>();
+
+/**
+ * Named dusun, lingkungan and kampung OpenStreetMap has in and around a village, from Overpass. Often empty: no official
+ * list goes below the village, and mapping in rural areas is patchy.
+ */
+export async function suggestHamlets(area: HamletArea): Promise<string[]> {
+  if (geocodingOff()) return [];
+  const cached = hamletCache.get(area.code);
+  if (cached) return cached;
+
+  const query = [area.village, area.district, area.regency, area.province, "Indonesia"].join(", ");
+  const [found] =
+    (await nominatim<{ lat: string; lon: string; boundingbox?: string[] }[]>(
+      `search?format=jsonv2&limit=1&countrycodes=id&accept-language=id&q=${encodeURIComponent(query)}`,
+    )) ?? [];
+  if (!found) return [];
+
+  // A village mapped as a boundary has a real box; one mapped as a single point gets about 2 km around it.
+  // The cap keeps a wrong match from pulling in a whole regency.
+  const [south, north, west, east] = (found.boundingbox ?? []).map(Number);
+  const boxed = [south, north, west, east].every((value) => Number.isFinite(value));
+  const centreLat = boxed ? (south! + north!) / 2 : Number(found.lat);
+  const centreLng = boxed ? (west! + east!) / 2 : Number(found.lon);
+  if (!Number.isFinite(centreLat) || !Number.isFinite(centreLng)) return [];
+  const halfLat = Math.min(0.08, Math.max(0.02, boxed ? (north! - south!) / 2 : 0));
+  const halfLng = Math.min(0.08, Math.max(0.02, boxed ? (east! - west!) / 2 : 0));
+  const bbox = [centreLat - halfLat, centreLng - halfLng, centreLat + halfLat, centreLng + halfLng].map((value) => value.toFixed(5)).join(",");
+
+  const response = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: { "User-Agent": userAgent(), "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ data: `[out:json][timeout:15];nwr["place"~"^(hamlet|isolated_dwelling|neighbourhood|quarter)$"]["name"](${bbox});out tags 150;` }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!response.ok) return [];
+  const data = (await response.json()) as { elements?: { tags?: Record<string, string> }[] };
+
+  const village = normalizeRegionName(area.village);
+  const names = [...new Set((data.elements ?? []).map((element) => element.tags?.name?.trim()).filter((name): name is string => Boolean(name)))]
+    .filter((name) => normalizeRegionName(name) !== village)
+    .sort((a, b) => a.localeCompare(b, "id"));
+  if (hamletCache.size >= 500) hamletCache.delete(hamletCache.keys().next().value!);
+  hamletCache.set(area.code, names);
+  return names;
+}
+
 /** The centre of a named area, dropping the most specific name until OpenStreetMap knows it. */
 async function geocodeNames(names: string[]) {
   for (let start = 0; start < names.length; start++) {
@@ -145,7 +207,7 @@ export async function findOrCreatePlace(lat: number, lng: number, known?: Partia
   if (existing) return existing.id;
 
   const info = known?.name
-    ? { name: null, city: null, region: null, country: null, district: null, village: null, ...known }
+    ? { name: null, city: null, region: null, country: null, district: null, village: null, hamlet: null, ...known }
     : await reverseGeocode(lat, lng).catch(() => null);
   return insertPlace({
     key,
@@ -155,6 +217,7 @@ export async function findOrCreatePlace(lat: number, lng: number, known?: Partia
     country: info?.country ?? null,
     district: info?.district ?? null,
     village: info?.village ?? null,
+    hamlet: info?.hamlet ?? null,
     lat: Number(lat.toFixed(5)),
     lng: Number(lng.toFixed(5)),
   });
@@ -167,6 +230,7 @@ export type NamedPlace = {
   region: string | null;
   district: string | null;
   village: string | null;
+  hamlet: string | null;
   country: string | null;
   regionCode: string | null;
   lat: number | null;
@@ -176,12 +240,27 @@ export type NamedPlace = {
 /** A place picked by hand. Without coordinates it sits at the centre of its area; returns null when that can't be found. */
 export async function findOrCreateNamedPlace(place: NamedPlace) {
   const [existing] = await db.select({ id: places.id }).from(places).where(eq(places.key, place.key)).limit(1);
-  if (existing) return existing.id;
+  if (existing) {
+    // The same searched spot picked again stays one place, with the area from the latest pick (a corrected village, a dusun added later).
+    await db
+      .update(places)
+      .set({
+        city: place.city,
+        region: place.region,
+        district: place.district,
+        village: place.village,
+        hamlet: place.hamlet,
+        country: place.country,
+        regionCode: place.regionCode,
+      })
+      .where(eq(places.id, existing.id));
+    return existing.id;
+  }
 
   const position =
     place.lat != null && place.lng != null
       ? { lat: place.lat, lng: place.lng }
-      : await geocodeNames([place.village, place.district, place.city, place.region].filter((name): name is string => Boolean(name))).catch(
+      : await geocodeNames([place.hamlet, place.village, place.district, place.city, place.region].filter((name): name is string => Boolean(name))).catch(
           () => null,
         );
   if (!position) return null;

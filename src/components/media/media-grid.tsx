@@ -11,7 +11,8 @@ import type { MediaCard } from "@/lib/queries";
 import { MediaViewer } from "./media-viewer";
 import { ThumbhashImage } from "./thumbhash-image";
 
-export type MediaGroup = { key: string; title?: string; subtitle?: string; divider?: string; items: MediaCard[] };
+/** `dividerNote` is a handwritten line beside the divider, e.g. how many memories that year holds. */
+export type MediaGroup = { key: string; title?: string; subtitle?: string; divider?: string; dividerNote?: string; items: MediaCard[] };
 export type MoveTarget = { id: string; title: string };
 
 type GridPhoto = Photo & { card: MediaCard };
@@ -49,8 +50,9 @@ export function MediaGallery({
         {groups.map((group, groupIndex) => (
           <section key={group.key} id={`group-${group.key}`} className="scroll-mt-20">
             {group.divider ? (
-              <h2 className="sticky top-16 z-10 -mx-1 mb-4 border-b bg-background/90 px-1 py-2 font-display text-3xl font-extrabold tracking-tight backdrop-blur">
-                {group.divider}
+              <h2 className="sticky top-16 z-10 -mx-1 mb-4 flex flex-wrap items-baseline gap-x-3 border-b bg-background/90 px-1 py-2 backdrop-blur">
+                <span className="font-display text-3xl font-extrabold tracking-tight">{group.divider}</span>
+                {group.dividerNote ? <span className="inline-block -rotate-2 font-hand text-xl text-note">{group.dividerNote}</span> : null}
               </h2>
             ) : null}
             {group.title ? (

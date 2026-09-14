@@ -21,6 +21,8 @@ const LocationInput = z.object({
   regency: Name.nullable(),
   district: Name.nullable(),
   village: Name.nullable(),
+  /** Dusun, lingkungan or kampung typed by hand. No official list goes below the village, so it's kept only with one. */
+  hamlet: Name.nullable().optional(),
   /** A spot chosen from search; without one the place sits at the centre of the region. */
   point: z
     .object({
@@ -34,7 +36,7 @@ const LocationInput = z.object({
 
 export type LocationTarget = z.input<typeof Target>;
 export type LocationValue = z.input<typeof LocationInput>;
-export type PlaceSummary = { name: string; detail: string; regionCode: string | null };
+export type PlaceSummary = { name: string; detail: string; regionCode: string | null; hamlet: string | null };
 /** Photos in an album, and how many of them have no location of their own and so use the album's. */
 export type AlbumUsage = { total: number; inherited: number };
 
@@ -62,10 +64,10 @@ async function summarize(placeId: string | null): Promise<PlaceSummary | null> {
   if (!placeId) return null;
   const [place] = await db.select().from(places).where(eq(places.id, placeId)).limit(1);
   if (!place) return null;
-  const detail = [place.village, place.district, place.city, place.region, place.country].filter(
+  const detail = [place.hamlet, place.village, place.district, place.city, place.region, place.country].filter(
     (part): part is string => Boolean(part) && part !== place.name,
   );
-  return { name: place.name, detail: [...new Set(detail)].join(", "), regionCode: place.regionCode };
+  return { name: place.name, detail: [...new Set(detail)].join(", "), regionCode: place.regionCode, hamlet: place.hamlet };
 }
 
 const albumPhotos = (albumId: string) =>
@@ -111,6 +113,7 @@ export async function setLocation(target: LocationTarget, value: LocationValue |
         city: depth >= 2 ? location.regency : null,
         district: depth >= 3 ? location.district : null,
         village: depth >= 4 ? location.village : null,
+        hamlet: depth >= 4 ? (location.hamlet ?? null) : null,
       };
 
       if (location.point) {
@@ -127,9 +130,11 @@ export async function setLocation(target: LocationTarget, value: LocationValue |
         if (depth < 2 || !names.region || !names.city || (depth >= 3 && !names.district) || (depth >= 4 && !names.village)) {
           throw new UserError("invalid_input");
         }
+        // Each dusun of a village is a place of its own, so it can sit at its own spot on the map.
+        const hamletKey = names.hamlet ? `:${names.hamlet.toLowerCase().split(/\s+/).join(" ")}` : "";
         placeId = await findOrCreateNamedPlace({
-          key: `region:${location.regionCode}`,
-          name: names.village ?? names.district ?? names.city,
+          key: `region:${location.regionCode}${hamletKey}`,
+          name: names.hamlet ?? names.village ?? names.district ?? names.city,
           ...names,
           country: "Indonesia",
           regionCode: location.regionCode,

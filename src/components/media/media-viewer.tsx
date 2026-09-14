@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { setAlbumCover } from "@/actions/albums";
 import { moveMedia, trashMedia } from "@/actions/media";
@@ -51,6 +51,10 @@ type Props = {
 };
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;
+/** Directions the small hearts of a burst fly out in. */
+const SPARKS = Array.from({ length: 8 }, (_, i) => (i / 8) * Math.PI * 2);
+/** Two taps closer together than this are a double tap. */
+const DOUBLE_TAP_MS = 320;
 
 export function MediaViewer({ items, index, morphId, onIndexChange, onClose, shareToken, readOnly, moveTargets }: Props) {
   const item = items[index]!;
@@ -60,6 +64,7 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   const te = useTranslations("errors");
   const tl = useTranslations("location");
   const format = useFormatter();
+  const now = useNow();
   const locale = useLocale();
   const router = useRouter();
 
@@ -68,6 +73,8 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   const [locationOpen, setLocationOpen] = useState(false);
   const [socialState, setSocialState] = useState<{ id: string; data: MediaSocial } | null>(null);
   const [socialVersion, setSocialVersion] = useState(0);
+  const [burst, setBurst] = useState(0);
+  const lastTap = useRef(0);
   const social = socialState?.id === item.id ? socialState.data : null;
 
   const go = useCallback(
@@ -120,15 +127,38 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   }, [index, items, shareToken]);
 
   const caption = item.caption ?? (locale === "id" ? item.aiCaption?.id : item.aiCaption?.en) ?? null;
-  const when = item.takenAt ? format.dateTime(new Date(item.takenAt), { dateStyle: "medium" }) : t("undated");
-  const meta = [when, item.placeName, item.uploaderName ? t("uploadedBy", { name: item.uploaderName }) : null].filter(Boolean).join(" · ");
+  const takenAt = item.takenAt ? new Date(item.takenAt) : null;
+  const meta = [takenAt ? null : t("undated"), item.placeName, item.uploaderName ? t("uploadedBy", { name: item.uploaderName }) : null]
+    .filter(Boolean)
+    .join(" · ");
+  // Everyone who reacted, you first: "Loved by you, Mama and 2 others".
+  const people = social ? [...(social.reactions.some((r) => r.mine) ? [t("you")] : []), ...social.reactedBy] : [];
+  const lovedBy =
+    people.length === 0
+      ? null
+      : people.length <= 3
+        ? t("lovedBy", { names: format.list(people) })
+        : t("lovedByMore", { names: people.slice(0, 2).join(", "), count: people.length - 2 });
 
   const fail = (code: string) => toast.error(te.has(code) ? te(code) : te("unknown"));
 
   async function onFavorite() {
+    if (!social) return;
+    // The heart bursts straight away; the server catches up.
+    if (!social.favorited) setBurst((n) => n + 1);
     const result = await toggleFavorite(item.id);
     if (!result.ok) return fail(result.error);
     setSocialState((s) => (s && s.id === item.id ? { ...s, data: { ...s.data, favorited: result.data.favorited } } : s));
+  }
+
+  /** A double tap on a photo favorites it. It never removes a favorite, so another double tap only bursts again. */
+  function onPhotoTap() {
+    const time = Date.now();
+    const isDouble = time - lastTap.current < DOUBLE_TAP_MS;
+    lastTap.current = isDouble ? 0 : time;
+    if (!isDouble || readOnly || !social) return;
+    if (social.favorited) setBurst((n) => n + 1);
+    else void onFavorite();
   }
 
   async function onCover() {
@@ -267,6 +297,7 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
                 if (info.offset.x < -80) go(1);
                 else if (info.offset.x > 80) go(-1);
               }}
+              onTap={item.type === "photo" ? onPhotoTap : undefined}
               className="flex h-full w-full items-center justify-center px-2 pb-28 pt-16 sm:px-14"
             >
               {item.type === "video" ? (
@@ -295,6 +326,8 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
             </motion.div>
           </AnimatePresence>
 
+          {burst > 0 ? <HeartBurst key={burst} /> : null}
+
           {index > 0 ? (
             <NavArrow side="left" label={tc("previous")} onClick={() => go(-1)}>
               <ChevronLeft />
@@ -308,8 +341,19 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
         </div>
 
         <div className="glass pointer-events-none absolute inset-x-3 bottom-3 z-10 rounded-2xl px-4 py-3 text-white sm:inset-x-6 sm:bottom-5">
+          {takenAt ? (
+            <p className="date-stamp mb-0.5 text-xs sm:text-sm">
+              {format.dateTime(takenAt, { dateStyle: "medium" })} · {format.relativeTime(takenAt, now)}
+            </p>
+          ) : null}
           {caption ? <p className="font-display text-lg font-bold leading-snug">{caption}</p> : null}
-          <p className="text-sm text-white/85">{meta}</p>
+          {meta ? <p className="text-sm text-white/85">{meta}</p> : null}
+          {lovedBy ? (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-white/80">
+              <Heart className="size-3.5 shrink-0 fill-[#ff8f7a] text-[#ff8f7a]" />
+              {lovedBy}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -332,6 +376,33 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
         <LocationDialog target={{ kind: "media", id: item.id }} open={locationOpen} onOpenChange={setLocationOpen} onSaved={() => router.refresh()} />
       ) : null}
     </motion.div>
+  );
+}
+
+/** A big heart that pops over the photo while small ones fly out around it. */
+function HeartBurst() {
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 grid place-items-center">
+      <motion.span
+        className="col-start-1 row-start-1 text-[#ff8f7a] drop-shadow-lg"
+        initial={{ scale: 0.2, opacity: 0 }}
+        animate={{ scale: [0.2, 1.2, 1, 1], opacity: [0, 1, 1, 0] }}
+        transition={{ duration: 1, times: [0, 0.3, 0.6, 1], ease: EASE }}
+      >
+        <Heart className="size-24 fill-current" />
+      </motion.span>
+      {SPARKS.map((angle) => (
+        <motion.span
+          key={angle}
+          className="col-start-1 row-start-1 text-[#ffb199]"
+          initial={{ x: 0, y: 0, scale: 0.4, opacity: 1 }}
+          animate={{ x: Math.cos(angle) * 120, y: Math.sin(angle) * 120, scale: 1, opacity: 0 }}
+          transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
+        >
+          <Heart className="size-5 fill-current" />
+        </motion.span>
+      ))}
+    </span>
   );
 }
 

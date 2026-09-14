@@ -13,14 +13,27 @@ import { count, isNull } from "drizzle-orm";
 import { env } from "@/lib/env";
 import { dayKey, filmStamp, mediaUrl, yearsSince } from "@/lib/format";
 import { canCreateAlbum, isAdmin } from "@/lib/permissions";
-import { getMemories, getPendingUsers, getRecapYears, getRecentMedia, getUpcoming } from "@/lib/queries";
+import {
+  getAlbumAnniversaries,
+  getDayMemories,
+  getMemories,
+  getPendingUsers,
+  getRecapYears,
+  getRecentMedia,
+  getUpcoming,
+  type MediaCard,
+  type UpcomingItem,
+} from "@/lib/queries";
 import { requireActiveUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Home" };
 
+type MilestoneItem = Extract<UpcomingItem, { kind: "milestone" }>;
+
 export default async function HomePage() {
   const user = await requireActiveUser();
   const t = await getTranslations("home");
+  const tc = await getTranslations("common");
   const tm = await getTranslations("memories");
   const tn = await getTranslations("nav");
   const ts = await getTranslations("story");
@@ -29,13 +42,14 @@ export default async function HomePage() {
   const timeZone = env.timeZone;
   const admin = isAdmin(user);
 
-  const [[albumCount], found, upcoming, recent, pending, years] = await Promise.all([
+  const [[albumCount], found, upcoming, recent, pending, years, anniversaries] = await Promise.all([
     db.select({ value: count() }).from(albums).where(isNull(albums.deletedAt)),
     getMemories(user.id, timeZone),
     getUpcoming(60),
     getRecentMedia(user.id, 10),
     admin ? getPendingUsers() : Promise.resolve([]),
     getRecapYears(user.id, timeZone),
+    getAlbumAnniversaries(user.id, timeZone),
   ]);
 
   const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "numeric", hourCycle: "h23" }).format(new Date()));
@@ -57,6 +71,8 @@ export default async function HomePage() {
     );
   }
 
+  const captionOf = (m: MediaCard) => m.caption ?? (locale === "id" ? m.aiCaption?.id : m.aiCaption?.en) ?? null;
+
   // The hero shows one year at a time: the newest year among the memories found.
   const newestYear = found.items[0] ? dayKey(found.items[0].takenAt!, timeZone).slice(0, 4) : null;
   const memories = newestYear ? found.items.filter((m) => dayKey(m.takenAt!, timeZone).startsWith(newestYear)) : [];
@@ -70,11 +86,19 @@ export default async function HomePage() {
   const memorySlides: StorySlide[] = memories.map((m) => ({
     key: m.id,
     image: mediaUrl(m.id, "large"),
-    title: m.caption ?? (locale === "id" ? m.aiCaption?.id : m.aiCaption?.en) ?? m.albumTitle ?? "",
+    title: captionOf(m) ?? m.albumTitle ?? "",
     stamp: filmStamp(m.takenAt!, timeZone),
     meta: [m.placeName, m.uploaderName].filter(Boolean).join(" · "),
   }));
   const lastYear = years.find((y) => y.year === new Date().getFullYear() - 1) ?? years.find((y) => y.year < new Date().getFullYear());
+
+  // A yearly milestone happening today brings back the photos taken on its date in earlier years.
+  const milestonesToday = upcoming
+    .filter((item): item is MilestoneItem => item.kind === "milestone" && item.repeatsYearly && item.days === 0)
+    .slice(0, 2);
+  const milestoneMemories = (
+    await Promise.all(milestonesToday.map(async (item) => ({ item, photos: await getDayMemories(user.id, item.originalDate.slice(5), timeZone) })))
+  ).filter((entry) => entry.photos.length > 0);
 
   return (
     <>
@@ -91,7 +115,7 @@ export default async function HomePage() {
                   {filmStamp(hero.takenAt!, timeZone)} · {memoryWhen}
                 </p>
                 <h2 className="max-w-[18ch] text-balance font-display text-3xl font-extrabold leading-none tracking-tight sm:text-4xl">
-                  {hero.caption ?? (locale === "id" ? hero.aiCaption?.id : hero.aiCaption?.en) ?? hero.albumTitle}
+                  {captionOf(hero) ?? hero.albumTitle}
                 </h2>
                 <p className="mt-2 text-sm text-white/85">
                   {onThisDay
@@ -173,6 +197,59 @@ export default async function HomePage() {
           </Link>
         ) : null}
       </div>
+
+      {milestoneMemories.length > 0 || anniversaries.length > 0 ? (
+        <section className="mt-10">
+          <h2 className="mb-3 font-display text-xl font-bold tracking-tight">{t("todayTitle")}</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {milestoneMemories.map(({ item, photos }) => {
+              const cover = photos.at(-1)!;
+              const turns = yearsSince(item.originalDate, new Date(item.date));
+              const note = turns > 0 ? (item.milestoneKind === "birthday" ? t("milestoneTurns", { count: turns }) : t("milestoneYears", { count: turns })) : undefined;
+              const slides: StorySlide[] = [
+                { key: "intro", title: item.title, note, meta: t("milestonePhotos", { count: photos.length }), image: mediaUrl(cover.id, "large") },
+                ...photos.map((m) => ({
+                  key: m.id,
+                  image: mediaUrl(m.id, "large"),
+                  title: captionOf(m) ?? m.albumTitle ?? item.title,
+                  stamp: filmStamp(m.takenAt!, timeZone),
+                  meta: [tm("yearsAgo", { count: yearsSince(dayKey(m.takenAt!, timeZone), new Date()) }), m.placeName].filter(Boolean).join(" · "),
+                })),
+              ];
+              return (
+                <div key={item.id} className="relative flex min-h-[220px] overflow-hidden rounded-3xl bg-[#2e241d] text-white">
+                  <ThumbhashImage src={mediaUrl(cover.id, "medium")} thumbhash={cover.thumbhash} className="absolute inset-0" imgClassName="animate-kenburns" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/85 via-[#1c120e]/20 to-transparent" />
+                  <div className="relative mt-auto flex w-full flex-wrap items-end justify-between gap-3 p-5">
+                    <div className="min-w-0">
+                      {note ? <p className="inline-block origin-left -rotate-2 font-hand text-2xl text-[#ffd3a8]">{note}</p> : null}
+                      <h3 className="flex items-center gap-2 font-display text-2xl font-extrabold leading-tight tracking-tight">
+                        {item.milestoneKind === "birthday" ? <Cake className="size-5 shrink-0" /> : <Heart className="size-5 shrink-0" />}
+                        {item.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-white/80">{t("milestonePhotos", { count: photos.length })}</p>
+                    </div>
+                    <StoryButton slides={slides} heading={item.title} label={t("relive")} variant="secondary" />
+                  </div>
+                </div>
+              );
+            })}
+            {anniversaries.map((album) => (
+              <Link key={album.id} href={`/albums/${album.id}`} className="group relative flex min-h-[220px] items-end overflow-hidden rounded-3xl bg-[#2e241d] p-5 text-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={mediaUrl(album.coverId, "medium")} alt="" className="absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-700 group-hover:scale-105" />
+                <span className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/85 via-[#1c120e]/20 to-transparent" />
+                <span className="relative min-w-0">
+                  <span className="date-stamp block text-sm">{t("yearsAgo", { count: yearsSince(album.startDate, new Date()) })}</span>
+                  {album.note ? <span className="mt-1 block origin-left -rotate-2 font-hand text-2xl leading-tight text-[#ffd3a8]">{album.note}</span> : null}
+                  <span className="block font-display text-2xl font-extrabold leading-tight tracking-tight">{album.title}</span>
+                  <span className="mt-1 block text-sm text-white/80">{tc("photos", { count: album.itemCount })}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {recent.length > 0 ? (
         <section className="mt-10">

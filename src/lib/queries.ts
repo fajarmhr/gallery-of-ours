@@ -227,6 +227,8 @@ export type PlaceOverview = {
   count: number;
   albumCount: number;
   coverId: string;
+  /** Unix seconds of the earliest photo there: when the family first went. */
+  firstAt: number;
 };
 
 export async function getPlacesOverview(viewerId: string): Promise<PlaceOverview[]> {
@@ -241,6 +243,7 @@ export async function getPlacesOverview(viewerId: string): Promise<PlaceOverview
       count: sql<number>`count(${media.id})::int`,
       albumCount: sql<number>`count(distinct ${media.albumId})::int`,
       coverId: sql<string>`(array_agg(${media.id} order by ${media.takenAt} desc nulls last))[1]`,
+      firstAt: sql<number>`extract(epoch from min(${sortDate}))::float8`.mapWith(Number),
     })
     .from(media)
     .innerJoin(albums, eq(media.albumId, albums.id))
@@ -314,6 +317,7 @@ export async function searchMemories(viewerId: string, query: string) {
           ilike(places.city, pattern),
           ilike(places.district, pattern),
           ilike(places.village, pattern),
+          ilike(places.hamlet, pattern),
           ilike(places.region, pattern),
           ilike(albums.title, pattern),
           ilike(media.originalName, pattern),
@@ -473,6 +477,53 @@ export async function getTrash() {
   };
 }
 
+/* ───────────── Days worth remembering ───────────── */
+
+export type AlbumAnniversary = { id: string; title: string; note: string | null; startDate: string; coverId: string; itemCount: number };
+
+/** Albums that started on this date in an earlier year and have a photo to show. */
+export async function getAlbumAnniversaries(viewerId: string, timeZone: string): Promise<AlbumAnniversary[]> {
+  const today = sql`(now() at time zone ${timeZone})`;
+  const rows = await db
+    .select({
+      id: albums.id,
+      title: albums.title,
+      note: albums.note,
+      startDate: albums.startDate,
+      coverId: sql<string | null>`(select m.id from media m where m.album_id = ${albums.id} and m.deleted_at is null and m.status = 'ready' order by (m.id = ${albums.coverMediaId}) desc nulls last, m.taken_at asc nulls last limit 1)`,
+      itemCount: sql<number>`(select count(*)::int from media m where m.album_id = ${albums.id} and m.deleted_at is null and m.status = 'ready')`,
+    })
+    .from(albums)
+    .where(
+      and(
+        isNull(albums.deletedAt),
+        or(isNull(albums.unlockAt), lte(albums.unlockAt, sql`now()`), eq(albums.createdById, viewerId)),
+        sql`to_char(${albums.startDate}, 'MM-DD') = to_char(${today}, 'MM-DD')`,
+        sql`extract(year from ${albums.startDate}) < extract(year from ${today})`,
+      ),
+    )
+    .orderBy(desc(albums.startDate))
+    .limit(4);
+  return rows.flatMap((row) => (row.startDate && row.coverId ? [{ ...row, startDate: row.startDate, coverId: row.coverId }] : []));
+}
+
+/** Photos taken on a month and day ("08-17") in earlier years, oldest first: a yearly milestone's look back. */
+export async function getDayMemories(viewerId: string, monthDay: string, timeZone: string) {
+  const taken = sql`(${media.takenAt} at time zone ${timeZone})`;
+  const rows = await selectCards()
+    .where(
+      and(
+        visibleMedia(viewerId),
+        eq(media.status, "ready"),
+        sql`to_char(${taken}, 'MM-DD') = ${monthDay}`,
+        sql`extract(year from ${taken}) < extract(year from (now() at time zone ${timeZone}))`,
+      ),
+    )
+    .orderBy(asc(media.takenAt))
+    .limit(60);
+  return rows.map(toCard);
+}
+
 /* ───────────── Year recap ───────────── */
 
 export async function getRecapYears(viewerId: string, timeZone: string) {
@@ -480,7 +531,12 @@ export async function getRecapYears(viewerId: string, timeZone: string) {
   // Group/order by ordinal: repeating yearExpr binds the time zone as new params ($1 vs $6),
   // which Postgres treats as a different expression → "must appear in the GROUP BY clause".
   return db
-    .select({ year: yearExpr, count: sql<number>`count(*)::int`, coverId: sql<string>`(array_agg(${media.id} order by random()))[1]` })
+    .select({
+      year: yearExpr,
+      count: sql<number>`count(*)::int`,
+      places: sql<number>`count(distinct ${placeOfMedia})::int`,
+      coverId: sql<string>`(array_agg(${media.id} order by random()))[1]`,
+    })
     .from(media)
     .innerJoin(albums, eq(media.albumId, albums.id))
     .where(and(visibleMedia(viewerId), eq(media.status, "ready")))

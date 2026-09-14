@@ -16,6 +16,7 @@ import {
   loadProvinces,
   loadRegencies,
   loadVillages,
+  normalizeRegionName,
   pickFromAddress,
   pickFromCode,
   type RegionOption,
@@ -33,7 +34,7 @@ const noOptions = (): Record<Level, RegionOption[]> => ({ province: [], regency:
 const loadChildren = (level: Level, code: string): Promise<RegionOption[]> =>
   level === "province" ? loadRegencies(code) : level === "regency" ? loadDistricts(code) : level === "district" ? loadVillages(code) : Promise.resolve([]);
 
-/** Sets where an album or one photo happened: search for a named place, or choose province, city, district and village. */
+/** Sets where an album or one photo happened: search for a named place, or choose province, city, district, village and dusun. */
 export function LocationDialog({
   target,
   open,
@@ -73,6 +74,7 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
   const [saved, setSaved] = useState<{ own: PlaceSummary | null; album: PlaceSummary | null; usage: AlbumUsage | null } | null>(null);
   const [pick, setPick] = useState<RegionPick>(emptyPick);
   const [options, setOptions] = useState(noOptions);
+  const [hamlet, setHamlet] = useState("");
   const [spot, setSpot] = useState<Spot | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlaceSearchResult[] | null>(null);
@@ -106,6 +108,7 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
           return;
         }
         setSaved(current.data);
+        setHamlet(current.data.own?.hamlet ?? "");
         const code = current.data.own?.regionCode;
         if (code) {
           const restored = await pickFromCode(code);
@@ -153,6 +156,7 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
     clearTimeout(searchTimer.current);
     setResults(null);
     setQuery(result.name);
+    setHamlet("");
     const inIndonesia = result.countryCode === "ID";
     setSpot({ lat: result.lat, lng: result.lng, name: result.name, country: result.country, inIndonesia });
     if (!inIndonesia) {
@@ -164,7 +168,12 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
     try {
       const response = await fetch(`/api/places/reverse?lat=${result.lat}&lng=${result.lng}`);
       const found = response.ok ? ((await response.json()) as ReverseAddress | null) : null;
-      if (found) await showPick(await pickFromAddress(found.address));
+      if (found) {
+        const picked = await pickFromAddress(found.address);
+        await showPick(picked);
+        const village = picked.village?.name;
+        if (found.hamlet && village && normalizeRegionName(found.hamlet) !== normalizeRegionName(village)) setHamlet(found.hamlet);
+      }
     } catch {
       // The spot stays chosen; its area can still be picked by hand.
     }
@@ -172,9 +181,12 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
   }
 
   async function choose(level: Level, option: RegionOption | null) {
+    if (option?.code === pick[level]?.code) return;
     const index = LEVELS.indexOf(level);
     const next: RegionPick = { ...pick, [level]: option };
     for (const deeper of LEVELS.slice(index + 1)) next[deeper] = null;
+    // A dusun belongs to one village.
+    setHamlet("");
     // A searched spot survives small corrections, but not a different province or city.
     if (index <= 1 && spot) {
       setSpot(null);
@@ -206,6 +218,7 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
         regency: pick.regency?.name ?? null,
         district: pick.district?.name ?? null,
         village: pick.village?.name ?? null,
+        hamlet: pick.village && hamlet.trim() ? hamlet.trim() : null,
         point: spot ? { lat: spot.lat, lng: spot.lng, name: spot.name, country: spot.country } : null,
       },
       { replaceOwn },
@@ -329,6 +342,7 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
               onChange={(option) => choose(level, option)}
             />
           ))}
+          <HamletField pick={pick} value={hamlet} onChange={setHamlet} />
         </div>
       ) : null}
 
@@ -436,6 +450,78 @@ function RegionSelect({
             ))}
             {shown.length === 0 ? <li className="px-2 py-2 text-sm text-muted-foreground">{options.length ? t("noMatch") : tc("loading")}</li> : null}
           </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Typed by hand, since no official list goes below the village; names OpenStreetMap has nearby are offered as shortcuts. */
+function HamletField({ pick, value, onChange }: { pick: RegionPick; value: string; onChange: (value: string) => void }) {
+  const t = useTranslations("location");
+  const tc = useTranslations("common");
+  const [found, setFound] = useState<{ area: string; names: string[] } | null>(null);
+  const { province, regency, district, village } = pick;
+  const area =
+    province && regency && district && village
+      ? new URLSearchParams({ code: village.code, village: village.name, district: district.name, regency: regency.name, province: province.name }).toString()
+      : null;
+
+  useEffect(() => {
+    if (!area) return;
+    let cancelled = false;
+    (async () => {
+      let names: string[] = [];
+      try {
+        const response = await fetch(`/api/places/hamlets?${area}`);
+        if (response.ok) names = (await response.json()) as string[];
+      } catch {
+        // Suggestions are only a shortcut; typing still works.
+      }
+      if (!cancelled) setFound({ area, names });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [area]);
+
+  const suggestions = found && found.area === area ? found.names : null;
+  const typed = normalizeRegionName(value);
+  const shown = (suggestions ?? [])
+    .filter((name) => {
+      const normalized = normalizeRegionName(name);
+      return normalized !== typed && (!typed || normalized.includes(typed));
+    })
+    .slice(0, 12);
+
+  return (
+    <div className={cn("rounded-xl border bg-background focus-within:ring-2 focus-within:ring-ring/50", !area && "opacity-50")}>
+      <label className="flex min-h-11 w-full items-center gap-3 px-3 py-2">
+        <span className="w-24 shrink-0 text-xs font-bold leading-tight text-muted-foreground sm:w-28">
+          {t("hamlet")}
+          <span className="block font-normal">{tc("optional")}</span>
+        </span>
+        <input
+          value={value}
+          disabled={!area}
+          maxLength={120}
+          autoComplete="off"
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={t("hamletPlaceholder")}
+          className="min-w-0 flex-1 bg-transparent text-base font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground sm:text-sm"
+        />
+        {area && !suggestions ? <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" /> : null}
+      </label>
+      {area && shown.length > 0 ? (
+        <div className="border-t p-2">
+          <p className="mb-1.5 px-1 text-xs text-muted-foreground">{t("hamletSuggestions")}</p>
+          <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto overscroll-contain">
+            {shown.map((name) => (
+              <button key={name} type="button" onClick={() => onChange(name)} className="rounded-full border px-2.5 py-1 text-xs font-semibold hover:bg-muted">
+                {name}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>

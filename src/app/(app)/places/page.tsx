@@ -1,7 +1,7 @@
 import { Earth, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { EmptyState, PageHeader } from "@/components/empty-state";
 import { MediaGallery } from "@/components/media/media-grid";
 import { PlacesMap } from "@/components/places/places-map";
@@ -18,6 +18,7 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
   const params = await searchParams;
   const t = await getTranslations("places");
   const tc = await getTranslations("common");
+  const format = await getFormatter();
   const [places, points] = await Promise.all([getPlacesOverview(user.id), getMapPoints(user.id)]);
 
   if (places.length === 0) {
@@ -65,6 +66,14 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
                   <span className="block truncate text-sm font-semibold">{place.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {[tc("photos", { count: place.count }), place.city, place.country].filter(Boolean).join(" · ")}
+                  </span>
+                  <span className="mt-0.5 block truncate font-hand text-base leading-tight text-note">
+                    {[
+                      t("firstVisit", { date: format.dateTime(new Date(place.firstAt * 1000), { month: "short", year: "numeric" }) }),
+                      place.albumCount > 1 ? t("visits", { count: place.albumCount }) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 </span>
               </Link>

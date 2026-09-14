@@ -1,4 +1,4 @@
-import { ImageIcon, Lock } from "lucide-react";
+import { Hourglass, ImageIcon, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SPRING = "transition-transform duration-500 ease-[cubic-bezier(.2,.8,.2,1)]";
@@ -9,17 +9,18 @@ const PILE_POSES = [
   "-rotate-[1.5deg] group-hover:-translate-y-[7%] group-hover:rotate-0 group-focus-visible:-translate-y-[7%] group-focus-visible:rotate-0",
 ];
 
-/** Three stacked prints that fan out when their `group` parent is hovered or focused. Cover goes on top. */
-export function AlbumPile({ covers, locked, className }: { covers: string[]; locked?: boolean; className?: string }) {
+/**
+ * Three stacked prints that fan out when their `group` parent is hovered or focused. Cover goes on top. A time capsule
+ * that hasn't opened carries a wax seal: large over blank prints when its photos are hidden, small for its creator.
+ */
+export function AlbumPile({ covers, locked, sealed, className }: { covers: string[]; locked?: boolean; sealed?: boolean; className?: string }) {
   const prints = [covers[2] ?? covers[1] ?? covers[0], covers[1] ?? covers[0], covers[0]];
   return (
     <span className={cn("relative block aspect-[1/1.12]", className)}>
       {prints.map((src, i) => (
         <span key={i} className={cn("polaroid absolute inset-0 p-[5%] pb-[22%]", SPRING, PILE_POSES[i])}>
           {locked ? (
-            <span className="grid h-full w-full place-items-center bg-blank text-[#a08e7a]">
-              <Lock className="size-6" />
-            </span>
+            <span className="block h-full w-full bg-blank" />
           ) : src ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
@@ -30,6 +31,37 @@ export function AlbumPile({ covers, locked, className }: { covers: string[]; loc
           )}
         </span>
       ))}
+      {locked || sealed ? (
+        <WaxSeal
+          className={cn(
+            "absolute",
+            locked ? "left-1/2 top-[40%] w-[36%] -translate-x-1/2 -translate-y-1/2" : "bottom-[12%] right-[4%] w-[26%] rotate-12",
+          )}
+        />
+      ) : null}
+    </span>
+  );
+}
+
+/** A terracotta wax seal pressed with an hourglass, the mark of a time capsule that hasn't opened. */
+export function WaxSeal({ className }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn("wax-seal grid aspect-square place-items-center", className)}>
+      <span className="grid size-[72%] place-items-center rounded-full border border-[#f8dcc8]/35">
+        <Hourglass className="size-[56%]" strokeWidth={2.25} />
+      </span>
+    </span>
+  );
+}
+
+/** A closed envelope with a wax seal on the tip of its flap. */
+export function SealedEnvelope({ className }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn("relative block aspect-[3/2]", className)}>
+      <span className="polaroid absolute inset-0 overflow-hidden rounded-sm">
+        <span className="absolute inset-x-0 top-0 h-[60%] bg-blank [clip-path:polygon(0_0,100%_0,50%_100%)]" />
+      </span>
+      <WaxSeal className="absolute left-1/2 top-[60%] w-[30%] -translate-x-1/2 -translate-y-1/2" />
     </span>
   );
 }

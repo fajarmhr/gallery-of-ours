@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Send, Sparkles, Trash2, X } from "lucide-react";
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
@@ -39,11 +40,16 @@ export function SocialPanel({
   const [sending, setSending] = useState(false);
   const [editing, setEditing] = useState(false);
   const [caption, setCaption] = useState(item.caption ?? "");
+  /** The reaction just added, whose emoji floats up once. */
+  const [popped, setPopped] = useState<{ kind: string; key: number } | null>(null);
 
   const fail = (code: string) => toast.error(te.has(code) ? te(code) : te("unknown"));
   const aiText = locale === "id" ? item.aiCaption?.id : item.aiCaption?.en;
 
   async function react(kind: string) {
+    if (!social?.reactions.find((reaction) => reaction.kind === kind)?.mine) {
+      setPopped((previous) => ({ kind, key: (previous?.key ?? 0) + 1 }));
+    }
     const result = await toggleReaction(item.id, kind);
     if (!result.ok) return fail(result.error);
     onChanged();
@@ -137,12 +143,24 @@ export function SocialPanel({
                   aria-pressed={reaction.mine}
                   aria-label={t(`reactions.${reaction.kind}`)}
                   className={cn(
-                    "inline-flex h-9 items-center gap-1 rounded-full border px-3 text-sm font-semibold transition-colors",
+                    "relative inline-flex h-9 items-center gap-1 rounded-full border px-3 text-sm font-semibold transition-colors",
                     reaction.mine ? "border-primary bg-accent text-accent-foreground" : "bg-background hover:bg-foreground/5",
                   )}
                 >
                   <span aria-hidden="true">{REACTION_EMOJI[reaction.kind]}</span>
                   {reaction.count > 0 ? <span className="tabular-nums">{reaction.count}</span> : null}
+                  {popped?.kind === reaction.kind ? (
+                    <motion.span
+                      key={popped.key}
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-x-0 top-0 text-center text-lg"
+                      initial={{ y: 0, opacity: 1, scale: 0.8 }}
+                      animate={{ y: -38, opacity: 0, scale: 1.6 }}
+                      transition={{ duration: 0.75, ease: "easeOut" }}
+                    >
+                      {REACTION_EMOJI[reaction.kind]}
+                    </motion.span>
+                  ) : null}
                 </button>
               </TooltipTrigger>
               <TooltipContent>{reaction.names.length ? reaction.names.join(", ") : t(`reactions.${reaction.kind}`)}</TooltipContent>

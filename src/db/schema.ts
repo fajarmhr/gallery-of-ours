@@ -105,6 +105,8 @@ export const places = pgTable("places", {
   country: text("country"),
   district: text("district"),
   village: text("village"),
+  /** Dusun, lingkungan or kampung inside the village, typed by hand or read from OpenStreetMap. */
+  hamlet: text("hamlet"),
   /** Kepmendagri code of a region picked by hand, e.g. "51.04.04.2001"; null for places found from GPS. */
   regionCode: text("region_code"),
   lat: doublePrecision("lat").notNull(),

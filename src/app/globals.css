@@ -195,6 +195,16 @@
     color: #ffae73;
     text-shadow: 0 0 8px rgb(255 120 40 / 0.55);
   }
+  .wax-seal {
+    border-radius: 46% 54% 52% 48% / 53% 47% 53% 47%;
+    background: radial-gradient(circle at 32% 28%, #d8704f 0%, #a8412a 48%, #7c2c18 100%);
+    color: #f8dcc8;
+    box-shadow:
+      inset 0 2px 2px rgb(255 255 255 / 0.28),
+      inset 0 -4px 8px rgb(0 0 0 / 0.35),
+      0 0 0 3px rgb(168 65 42 / 0.45),
+      0 8px 18px rgb(60 20 10 / 0.35);
+  }
   .pb-safe {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }

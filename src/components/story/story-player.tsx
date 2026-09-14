@@ -4,6 +4,7 @@ import { Pause, Play, SkipBack, SkipForward, Volume2, VolumeX, X } from "lucide-
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,15 @@ type Props = {
   onClose: () => void;
 };
 
-export function StoryPlayer({ slides, heading, musicUrl, onClose }: Props) {
+/**
+ * Rendered into <body>: an ancestor with backdrop-filter or transform (like the album header's glass panel) would
+ * otherwise become the containing block of this fixed overlay and shrink it to that ancestor's box.
+ */
+export function StoryPlayer(props: Props) {
+  return createPortal(<StoryOverlay {...props} />, document.body);
+}
+
+function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
   const t = useTranslations("story");
   const tc = useTranslations("common");
   const [index, setIndex] = useState(0);

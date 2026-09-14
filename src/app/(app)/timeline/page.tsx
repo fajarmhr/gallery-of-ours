@@ -6,7 +6,7 @@ import { MediaGallery, type MediaGroup } from "@/components/media/media-grid";
 import { TimelineModes, YearRail, type TimelineMode } from "@/components/timeline/timeline";
 import { env } from "@/lib/env";
 import { dayKey } from "@/lib/format";
-import { getTimeline } from "@/lib/queries";
+import { getRecapYears, getTimeline } from "@/lib/queries";
 import { requireActiveUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Timeline" };
@@ -20,7 +20,7 @@ export default async function TimelinePage({ searchParams }: PageProps<"/timelin
   const format = await getFormatter();
   const timeZone = env.timeZone;
 
-  const items = await getTimeline(user.id, 900);
+  const [items, years] = await Promise.all([getTimeline(user.id, 900), getRecapYears(user.id, timeZone)]);
   const modes = <TimelineModes current={mode} labels={{ years: t("years"), months: t("months"), days: t("days") }} />;
 
   if (items.length === 0) {
@@ -47,6 +47,8 @@ export default async function TimelinePage({ searchParams }: PageProps<"/timelin
     group.items.push(item);
   }
 
+  // Whole-year totals, since the page only loads the newest photos.
+  const yearTotals = new Map(years.map((y) => [String(y.year), y]));
   for (const group of groups) {
     const places = [...new Set(group.items.map((i) => i.placeName).filter(Boolean))].slice(0, 3);
     if (mode === "years") {
@@ -57,6 +59,8 @@ export default async function TimelinePage({ searchParams }: PageProps<"/timelin
       group.title = format.dateTime(new Date(`${group.key}T12:00:00`), { weekday: "long", day: "numeric", month: "long" });
     }
     group.subtitle = [...places, tc("items", { count: group.items.length })].join(" · ");
+    const totals = group.divider ? yearTotals.get(group.divider) : undefined;
+    if (totals) group.dividerNote = t("yearNote", { count: totals.count, places: totals.places });
   }
 
   const anchors = [...new Set(groups.map((g) => g.key.slice(0, 4)))].map((year) => ({

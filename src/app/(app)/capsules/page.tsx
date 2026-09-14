@@ -52,7 +52,7 @@ export default async function CapsulesPage() {
             const days = Math.max(1, Math.ceil((opens.getTime() - now) / 86_400_000));
             return (
               <Link key={capsule.id} href={`/albums/${capsule.id}`} className="group flex flex-col gap-1 rounded-3xl px-2.5 pb-4 pt-7 transition-colors hover:bg-foreground/5 sm:px-4">
-                <AlbumPile covers={capsule.covers.map((c) => mediaUrl(c.id, "thumb"))} locked={capsule.locked} className="mx-auto mb-6 w-[70%] sm:w-[62%]" />
+                <AlbumPile covers={capsule.covers.map((c) => mediaUrl(c.id, "thumb"))} locked={capsule.locked} sealed={sealed} className="mx-auto mb-6 w-[70%] sm:w-[62%]" />
                 <span className={cn("self-start rounded-full px-2.5 py-0.5 text-[11px] font-bold", sealed ? "bg-accent text-accent-foreground" : "bg-olive-soft text-olive")}>
                   {sealed ? t("sealed") : t("open")}
                 </span>

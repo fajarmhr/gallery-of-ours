@@ -1,6 +1,7 @@
 "use client";
 
 import { CircleAlert, CircleCheck, LoaderCircle, Upload, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -20,6 +21,8 @@ type Job = { clientId: string; file: File; albumId: string; storageId: string };
 type UploadAlbum = { id: string; title: string };
 /** A Cloudinary account files can be stored in instead of R2. */
 export type StorageOption = { id: string; label: string };
+/** What a finished round of uploads brought in, shown as a small stack of prints. */
+type Arrival = { id: number; count: number; albumId: string; title: string; previews: string[] };
 
 const UploadContext = createContext<{ open: (albumId?: string) => void } | null>(null);
 
@@ -56,10 +59,12 @@ export function UploadProvider({
   const [storageId, setStorageId] = useState(PRIMARY_STORAGE);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [arrival, setArrival] = useState<Arrival | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const jobs = useRef<Job[]>([]);
   const running = useRef(0);
-  const finished = useRef(0);
+  /** Files finished since the last arrival, with the album they went to. */
+  const batch = useRef<{ albumId: string; preview: string | null }[]>([]);
 
   const open = useCallback(
     (preselect?: string) => {
@@ -136,11 +141,28 @@ export function UploadProvider({
       const done = await finishUpload(targets.mediaId, uploaded);
       if (!done.ok) throw new Error(done.error);
       update(clientId, { stage: "done" });
-      finished.current += 1;
+      batch.current.push({ albumId: target, preview: prepared.previewUrl ?? null });
     } catch (error) {
       const code = error instanceof Error ? error.message : "unknown";
       update(clientId, { stage: "failed", error: te.has(code) ? te(code) : te("unknown") });
     }
+  }
+
+  /** Everything finished: show what arrived, in the album most of it went to. */
+  function celebrate() {
+    const added = batch.current;
+    batch.current = [];
+    const perAlbum = new Map<string, number>();
+    for (const entry of added) perAlbum.set(entry.albumId, (perAlbum.get(entry.albumId) ?? 0) + 1);
+    const target = [...perAlbum.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+    setArrival({
+      id: Date.now(),
+      count: added.length,
+      albumId: target,
+      title: albums.find((album) => album.id === target)?.title ?? "",
+      previews: added.flatMap((entry) => (entry.preview ? [entry.preview] : [])).slice(-3),
+    });
+    router.refresh();
   }
 
   function pump() {
@@ -149,11 +171,7 @@ export function UploadProvider({
       running.current += 1;
       void runJob(job).finally(() => {
         running.current -= 1;
-        if (running.current === 0 && jobs.current.length === 0 && finished.current > 0) {
-          toast.success(t("allDone", { count: finished.current }));
-          finished.current = 0;
-          router.refresh();
-        }
+        if (running.current === 0 && jobs.current.length === 0 && batch.current.length > 0) celebrate();
         pump();
       });
     }
@@ -178,6 +196,14 @@ export function UploadProvider({
     pump();
   }
 
+  const closeArrival = useCallback(() => setArrival(null), []);
+  const openArrival = () => {
+    if (!arrival) return;
+    router.push(`/albums/${arrival.albumId}`);
+    setArrival(null);
+    setOpen(false);
+  };
+
   const busy = queue.some((item) => !["done", "failed"].includes(item.stage));
 
   const stageLabel = (item: QueueItem) =>
@@ -201,6 +227,8 @@ export function UploadProvider({
           </SheetHeader>
 
           <div className="flex flex-col gap-4 p-4">
+            {arrival ? <ArrivalCard key={arrival.id} arrival={arrival} onOpen={openArrival} onClose={closeArrival} /> : null}
+
             {albums.length === 0 ? (
               <p className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">{canCreateAlbum ? t("noAlbums") : t("noAccess")}</p>
             ) : (
@@ -337,7 +365,77 @@ export function UploadProvider({
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* With the sheet closed, the arrival floats over the page instead (the open sheet blocks clicks outside it). */}
+      <AnimatePresence>
+        {arrival && !isOpen ? <ArrivalCard key={arrival.id} arrival={arrival} floating onOpen={openArrival} onClose={closeArrival} /> : null}
+      </AnimatePresence>
     </UploadContext.Provider>
+  );
+}
+
+const PRINT_POSES = [
+  { x: -16, rotate: -9 },
+  { x: 14, rotate: 7 },
+  { x: 0, rotate: -2 },
+];
+
+/** Uploads finished: the new photos drop in as a little stack of prints. A floating card steps aside after 10 seconds. */
+function ArrivalCard({ arrival, floating = false, onOpen, onClose }: { arrival: Arrival; floating?: boolean; onOpen: () => void; onClose: () => void }) {
+  const t = useTranslations("upload");
+  const tc = useTranslations("common");
+
+  useEffect(() => {
+    if (!floating) return;
+    const timer = setTimeout(onClose, 10_000);
+    return () => clearTimeout(timer);
+  }, [floating, onClose]);
+
+  return (
+    <motion.div
+      role="status"
+      initial={{ opacity: 0, y: 24, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 16 }}
+      transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+      className={cn(
+        "flex items-center gap-4 rounded-3xl border bg-card p-4 text-card-foreground",
+        floating ? "fixed inset-x-4 bottom-24 z-[60] shadow-2xl sm:left-auto sm:right-6 sm:w-[380px] lg:bottom-6" : "shadow-sm",
+      )}
+    >
+      <span className="grid size-20 shrink-0 place-items-center">
+        {arrival.previews.length ? (
+          arrival.previews.map((src, i) => {
+            const pose = PRINT_POSES[i + PRINT_POSES.length - arrival.previews.length]!;
+            return (
+              <motion.span
+                key={src}
+                className="polaroid col-start-1 row-start-1 block size-14 p-1 pb-3"
+                initial={{ y: -70, opacity: 0, rotate: 0, x: 0 }}
+                animate={{ y: 0, opacity: 1, rotate: pose.rotate, x: pose.x }}
+                transition={{ delay: 0.15 + i * 0.14, type: "spring", stiffness: 260, damping: 18 }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="size-full object-cover" />
+              </motion.span>
+            );
+          })
+        ) : (
+          <CircleCheck className="size-10 text-olive" />
+        )}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="-rotate-1 font-hand text-xl leading-none text-note">{t("arrivedNote")}</p>
+        <p className="mt-1 font-display text-lg font-bold leading-tight">{t("allDone", { count: arrival.count })}</p>
+        {arrival.title ? <p className="truncate text-sm text-muted-foreground">{t("arrivedIn", { album: arrival.title })}</p> : null}
+        <Button type="button" size="sm" onClick={onOpen} className="mt-2 rounded-lg">
+          {t("openAlbum")}
+        </Button>
+      </div>
+      <button type="button" aria-label={tc("close")} onClick={onClose} className="grid size-8 shrink-0 place-items-center self-start rounded-lg hover:bg-foreground/5">
+        <X className="size-4" />
+      </button>
+    </motion.div>
   );
 }
 

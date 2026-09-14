@@ -11,7 +11,7 @@ import { MediaGallery, type MediaGroup } from "@/components/media/media-grid";
 import { LanguageSwitch } from "@/components/preferences";
 import { UnlockForm } from "@/components/share/unlock-form";
 import { db } from "@/db";
-import { shareLinks } from "@/db/schema";
+import { shareLinks, user } from "@/db/schema";
 import { env } from "@/lib/env";
 import { dayKey, formatDateRange, mediaUrl } from "@/lib/format";
 import { isAlbumLocked } from "@/lib/permissions";
@@ -63,7 +63,12 @@ export default async function SharedAlbumPage({ params }: PageProps<"/s/[token]"
   after(() => db.update(shareLinks).set({ viewCount: sql`${shareLinks.viewCount} + 1` }).where(eq(shareLinks.id, link.id)));
 
   const { album } = row;
-  const items = await getAlbumMedia(album.id);
+  const [items, [sharer]] = await Promise.all([
+    getAlbumMedia(album.id),
+    link.createdById ? db.select({ name: user.name }).from(user).where(eq(user.id, link.createdById)).limit(1) : Promise.resolve([]),
+  ]);
+  // Only the first name: the note reads like one family member handing over the photos.
+  const sharerName = sharer?.name.split(" ")[0] || null;
   const timeZone = env.timeZone;
   const groups: MediaGroup[] = [];
   for (const item of items) {
@@ -80,6 +85,9 @@ export default async function SharedAlbumPage({ params }: PageProps<"/s/[token]"
 
   return shell(
     <>
+      <p className="mb-3 inline-block origin-left -rotate-2 font-hand text-2xl text-note sm:text-3xl">
+        {sharerName ? t("welcomeFrom", { name: sharerName }) : t("welcome")}
+      </p>
       <section className="relative mb-8 flex min-h-[280px] items-end overflow-hidden rounded-3xl bg-[#2e241d] text-white sm:min-h-[340px]">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -1,7 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import type { media } from "@/db/schema";
 import { env, type CloudinaryAccount } from "@/lib/env";
-import type { VariantName } from "@/lib/storage";
+import { ROOT_FOLDER, type VariantName } from "@/lib/storage";
 
 const PREFIX = "cloudinary:";
 /** Same sizes as the R2 variants built in media-processing. */
@@ -131,6 +131,13 @@ async function folderMode(account: CloudinaryAccount) {
   }
   return mode;
 }
+
+/**
+ * "dynamic" (accounts made since 2024) lets assets sit in folders independent of their public_id, so the app can file them
+ * into album folders without breaking links. Takes a cloud name or a "cloudinary:<cloud name>" source.
+ */
+export const cloudinaryFolderMode = (cloudNameOrSource: string) =>
+  folderMode(accountFor(isCloudinarySource(cloudNameOrSource) ? cloudNameOrSource.slice(PREFIX.length) : cloudNameOrSource));
 
 // The SDK types list root_folders(callback, options), but its v2 wrapper takes the options first.
 const rootFolders = cloudinary.api.root_folders as unknown as (options: object) => Promise<{ folders?: CloudinaryFolder[] }>;
@@ -278,15 +285,23 @@ export async function makeCloudinaryAssetPrivate(cloudName: string, publicId: st
 
 /* ───────────── Uploading from the browser ───────────── */
 
-/** Folder new uploads go into, so they're easy to find in the Cloudinary console. */
-const UPLOAD_FOLDER = "gallery-of-ours";
-
 export type CloudinaryUploadTarget = { url: string; fields: Record<string, string> };
 
-/** Signed form fields for a private upload straight from the browser; the file never passes through our server. */
-export function cloudinaryUploadTarget(cloudName: string, item: Pick<MediaRow, "id" | "type">): CloudinaryUploadTarget {
+/**
+ * Signed form fields for a private upload straight from the browser; the file never passes through our server. With a
+ * `place` (dynamic folder mode) the asset lands in its album folder under its date name, while the public_id stays the media
+ * id. Without one it goes flat into the top folder, as fixed-folder accounts always did.
+ */
+export function cloudinaryUploadTarget(
+  cloudName: string,
+  item: Pick<MediaRow, "id" | "type">,
+  place?: { folder: string; displayName: string },
+): CloudinaryUploadTarget {
   const account = accountFor(cloudName);
-  const params = { timestamp: String(Math.floor(Date.now() / 1000)), public_id: item.id, folder: UPLOAD_FOLDER, type: "authenticated" };
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const params: Record<string, string> = place
+    ? { timestamp, public_id: item.id, asset_folder: place.folder, display_name: place.displayName, type: "authenticated" }
+    : { timestamp, public_id: item.id, folder: ROOT_FOLDER, type: "authenticated" };
   return {
     url: `https://api.cloudinary.com/v1_1/${encodeURIComponent(account.cloudName)}/${resourceTypeOf(item)}/upload`,
     fields: { ...params, api_key: account.apiKey, signature: cloudinary.utils.api_sign_request(params, account.apiSecret) },
@@ -295,15 +310,29 @@ export function cloudinaryUploadTarget(cloudName: string, item: Pick<MediaRow, "
 
 /**
  * Confirms a browser upload arrived (Cloudinary answers 404 when it didn't) and generates its sizes. The public_id must be
- * the one that was signed, with or without the upload folder in front, which depends on the account's folder mode.
+ * the one that was signed, with or without the top folder in front, which depends on the account's folder mode.
  */
 export async function finishCloudinaryUpload(item: Pick<MediaRow, "id" | "source" | "type">, publicId: string) {
-  if (publicId !== item.id && publicId !== `${UPLOAD_FOLDER}/${item.id}`) {
+  if (publicId !== item.id && publicId !== `${ROOT_FOLDER}/${item.id}`) {
     throw new CloudinaryError(`Upload for ${item.id} came back as "${publicId}"`, 400);
   }
   const result = await generateSizes(accountFor(item.source.slice(PREFIX.length)), publicId, resourceTypeOf(item));
   const numberOf = (key: string) => (typeof result[key] === "number" ? (result[key] as number) : null);
   return { bytes: numberOf("bytes"), width: numberOf("width"), height: numberOf("height"), durationSec: numberOf("duration") };
+}
+
+/** Files an app-uploaded asset into another asset folder under a new display name. Its public_id and links stay the same. */
+export async function moveCloudinaryAsset(item: Pick<MediaRow, "source" | "originalKey" | "type">, folder: string, displayName: string) {
+  const account = accountFor(item.source.slice(PREFIX.length));
+  await call(() =>
+    cloudinary.api.update(item.originalKey, {
+      ...credentials(account),
+      resource_type: resourceTypeOf(item),
+      type: "authenticated",
+      asset_folder: folder,
+      display_name: displayName,
+    }),
+  );
 }
 
 /* ───────────── Metadata ───────────── */

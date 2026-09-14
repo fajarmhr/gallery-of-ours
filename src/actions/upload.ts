@@ -10,9 +10,9 @@ import { run, UserError } from "@/lib/action";
 import { logActivity } from "@/lib/activity";
 import {
   CloudinaryError,
+  cloudinaryFolderMode,
   cloudinarySource,
   cloudinaryUploadTarget,
-  destroyCloudinaryMedia,
   finishCloudinaryUpload,
   isCloudinarySource,
   type CloudinaryUploadTarget,
@@ -21,7 +21,8 @@ import { env } from "@/lib/env";
 import { processMedia } from "@/lib/media-processing";
 import { assertCanEditAlbum, isAdmin, isAlbumLocked, PermissionError } from "@/lib/permissions";
 import { actionUser } from "@/lib/session";
-import { extensionFor, mediaKeys, storage } from "@/lib/storage";
+import { mediaKeys, storage } from "@/lib/storage";
+import { albumFolder, claimPath, displayNameOf, folderPath, removeStoredMedia } from "@/lib/storage-layout";
 
 /** A single presigned PUT to R2 can carry up to 5 GB. */
 const MAX_BYTES = 5 * 1024 * 1024 * 1024;
@@ -69,7 +70,7 @@ export type StartedUpload = {
   cloudinary?: CloudinaryUploadTarget;
 };
 
-/** `storageId` is "primary" (R2) or the cloud name of a configured Cloudinary account. */
+/** `storageId` is "primary" (R2) or the cloud name of a configured Cloudinary account. Originals are filed in the album's folder. */
 export async function startUploads(albumId: string, rawItems: UploadItemInput[], storageId = "primary") {
   return run(async () => {
     const current = await actionUser();
@@ -88,6 +89,9 @@ export async function startUploads(albumId: string, rawItems: UploadItemInput[],
     }
 
     const files = cloudName ? null : await storage();
+    const source = cloudName ? cloudinarySource(cloudName) : "primary";
+    // Cloudinary accounts in the old fixed folder mode can't file assets into folders without changing their links.
+    const folder = cloudName && (await cloudinaryFolderMode(cloudName)) !== "dynamic" ? null : await albumFolder(album);
     const results: StartedUpload[] = [];
 
     for (const item of parsed.data) {
@@ -115,23 +119,36 @@ export async function startUploads(albumId: string, rawItems: UploadItemInput[],
         lat: hasGps ? item.lat : null,
         lng: hasGps ? item.lng : null,
       };
+      const naming = { id, takenAt: row.takenAt, originalName: item.name, mime };
 
       if (cloudName) {
         // Cloudinary makes its own sizes and video stills, so the JPEGs made in the browser aren't sent.
-        await db.insert(media).values({ ...row, source: cloudinarySource(cloudName), originalKey: id });
-        results.push({ clientId: item.clientId, mediaId: id, cloudinary: cloudinaryUploadTarget(cloudName, { id, type: item.type }) });
+        const values = { ...row, source, originalKey: id };
+        if (!folder) {
+          await db.insert(media).values(values);
+          results.push({ clientId: item.clientId, mediaId: id, cloudinary: cloudinaryUploadTarget(cloudName, { id, type: item.type }) });
+          continue;
+        }
+        const path = await claimPath(source, folder, naming, (tx, storagePath) => tx.insert(media).values({ ...values, storagePath }));
+        results.push({
+          clientId: item.clientId,
+          mediaId: id,
+          cloudinary: cloudinaryUploadTarget(cloudName, { id, type: item.type }, { folder: folderPath(folder), displayName: displayNameOf(path) }),
+        });
         continue;
       }
 
       const store = files ?? (await storage());
       const keys = mediaKeys(id);
-      const originalKey = keys.original(extensionFor(item.name, item.mime));
-      await db.insert(media).values({
-        ...row,
-        originalKey,
-        displayKey: item.hasDisplay ? keys.display : null,
-        posterKey: item.hasPoster ? keys.poster : null,
-      });
+      const originalKey = await claimPath(source, folder!, naming, (tx, path) =>
+        tx.insert(media).values({
+          ...row,
+          originalKey: path,
+          storagePath: path,
+          displayKey: item.hasDisplay ? keys.display : null,
+          posterKey: item.hasPoster ? keys.poster : null,
+        }),
+      );
       results.push({
         clientId: item.clientId,
         mediaId: id,
@@ -195,11 +212,7 @@ export async function cancelUpload(mediaId: string) {
     if (!item) return null;
     if (item.uploaderId !== current.id && !isAdmin(current)) throw new PermissionError();
     if (item.status !== "uploading") return null;
-    if (isCloudinarySource(item.source)) {
-      await destroyCloudinaryMedia(item).catch((error) => console.warn(`Couldn't remove the cancelled upload ${mediaId} from Cloudinary`, error));
-    } else {
-      await (await storage()).removePrefix(mediaKeys(mediaId).prefix);
-    }
+    await removeStoredMedia(item).catch((error) => console.warn(`Couldn't remove the cancelled upload ${mediaId}`, error));
     await db.delete(media).where(eq(media.id, mediaId));
     return null;
   });

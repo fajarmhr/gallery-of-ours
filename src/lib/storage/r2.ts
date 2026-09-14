@@ -1,4 +1,6 @@
 import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -70,6 +72,14 @@ export function r2Driver(): StorageDriver {
         if (keys.length) await client.send(new DeleteObjectsCommand({ Bucket, Delete: { Objects: keys } }));
         token = page.IsTruncated ? page.NextContinuationToken : undefined;
       } while (token);
+    },
+    async copy(from, to) {
+      // CopySource is "bucket/key" with the key URL-encoded; album and file names contain spaces and commas.
+      const source = `${Bucket}/${from.split("/").map(encodeURIComponent).join("/")}`;
+      await client.send(new CopyObjectCommand({ Bucket, Key: to, CopySource: source }));
+    },
+    async remove(key) {
+      await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
     },
   };
 }

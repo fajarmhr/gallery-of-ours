@@ -2,6 +2,7 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { albums, media } from "@/db/schema";
@@ -14,7 +15,8 @@ import {
   PermissionError,
 } from "@/lib/permissions";
 import { actionUser } from "@/lib/session";
-import { albumMusicKey, extensionFor, storage } from "@/lib/storage";
+import { extensionFor, storage } from "@/lib/storage";
+import { albumFolder, musicPath, organizeAlbum } from "@/lib/storage-layout";
 
 const optionalDate = z
   .string()
@@ -67,6 +69,7 @@ export async function createAlbum(input: AlbumInputValues) {
   });
 }
 
+/** Saves album details; a new title also renames the album's storage folder, in the background. */
 export async function updateAlbum(albumId: string, input: AlbumInputValues) {
   return run(async () => {
     const current = await actionUser();
@@ -77,6 +80,9 @@ export async function updateAlbum(albumId: string, input: AlbumInputValues) {
     const capsuleChanged = (existing.unlockAt?.getTime() ?? null) !== (values.unlockAt?.getTime() ?? null);
     if (capsuleChanged && !isAdmin(current)) throw new PermissionError();
     await db.update(albums).set(values).where(eq(albums.id, albumId));
+    if (values.title !== existing.title) {
+      after(() => organizeAlbum(albumId).catch((error) => console.error(`Filing album ${albumId} into its renamed folder failed`, error)));
+    }
     await logActivity(current.id, "album.update", "album", albumId);
     revalidatePath("/albums");
     revalidatePath(`/albums/${albumId}`);
@@ -113,13 +119,21 @@ export async function trashAlbum(albumId: string) {
   });
 }
 
+async function loadAlbum(albumId: string) {
+  const [album] = await db.select().from(albums).where(eq(albums.id, albumId)).limit(1);
+  if (!album || album.deletedAt) throw new UserError("album_missing");
+  return album;
+}
+
+/** Story music is filed next to the album's photos, as "Story music.<ext>". */
 export async function startAlbumMusicUpload(albumId: string, filename: string, mime: string, size: number) {
   return run(async () => {
     const current = await actionUser();
     await assertCanEditAlbum(current, albumId);
     if (!mime.startsWith("audio/")) throw new UserError("unsupported_file");
     if (size > 30 * 1024 * 1024) throw new UserError("file_too_large");
-    const key = albumMusicKey(albumId, extensionFor(filename, mime));
+    const album = await loadAlbum(albumId);
+    const key = musicPath(await albumFolder(album), extensionFor(filename, mime));
     const target = await (await storage()).presignPut(key, mime);
     return { key, ...target };
   });
@@ -129,9 +143,15 @@ export async function finishAlbumMusicUpload(albumId: string, key: string) {
   return run(async () => {
     const current = await actionUser();
     await assertCanEditAlbum(current, albumId);
-    if (!key.startsWith(`albums/${albumId}/music.`)) throw new PermissionError();
-    if (!(await (await storage()).exists(key))) throw new UserError("upload_missing");
+    const album = await loadAlbum(albumId);
+    if (key !== musicPath(await albumFolder(album), key.split(".").pop() ?? "")) throw new PermissionError();
+    const files = await storage();
+    if (!(await files.exists(key))) throw new UserError("upload_missing");
     await db.update(albums).set({ musicKey: key }).where(eq(albums.id, albumId));
+    // A song in another format would otherwise leave the old file behind.
+    if (album.musicKey && album.musicKey !== key) {
+      await files.remove(album.musicKey).catch((error) => console.warn(`Couldn't remove the old music ${album.musicKey}`, error));
+    }
     revalidatePath(`/albums/${albumId}`);
     return null;
   });
@@ -141,7 +161,8 @@ export async function removeAlbumMusic(albumId: string) {
   return run(async () => {
     const current = await actionUser();
     await assertCanEditAlbum(current, albumId);
-    await (await storage()).removePrefix(`albums/${albumId}/`);
+    const [album] = await db.select({ musicKey: albums.musicKey }).from(albums).where(eq(albums.id, albumId)).limit(1);
+    if (album?.musicKey) await (await storage()).remove(album.musicKey);
     await db.update(albums).set({ musicKey: null }).where(eq(albums.id, albumId));
     revalidatePath(`/albums/${albumId}`);
     return null;

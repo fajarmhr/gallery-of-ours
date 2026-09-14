@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { env } from "@/lib/env";
 import { signedParams } from "@/lib/signing";
@@ -48,6 +48,14 @@ export function localDriver(): StorageDriver {
     },
     async removePrefix(prefix) {
       await rm(localPath(prefix.replace(/\/$/, "")), { recursive: true, force: true });
+    },
+    async copy(from, to) {
+      const target = localPath(to);
+      await mkdir(path.dirname(target), { recursive: true });
+      await copyFile(localPath(from), target);
+    },
+    async remove(key) {
+      await rm(localPath(key), { force: true });
     },
   };
 }

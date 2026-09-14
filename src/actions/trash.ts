@@ -6,25 +6,22 @@ import { db } from "@/db";
 import { albums, media } from "@/db/schema";
 import { run, UserError } from "@/lib/action";
 import { logActivity } from "@/lib/activity";
-import { destroyCloudinaryMedia, isCloudinarySource } from "@/lib/cloudinary";
 import { assertAdmin } from "@/lib/permissions";
 import { actionUser } from "@/lib/session";
-import { mediaKeys, storage } from "@/lib/storage";
+import { storage } from "@/lib/storage";
+import { removeStoredMedia } from "@/lib/storage-layout";
 
 const TRASH_DAYS = 30;
 
+/** Deletes the rows and every stored file: the original in its album folder and the sizes the app made. */
 async function destroyMedia(ids: string[]) {
   if (!ids.length) return;
-  const files = await storage();
   const rows = await db
     .select({ id: media.id, source: media.source, originalKey: media.originalKey, originalName: media.originalName, type: media.type })
     .from(media)
     .where(inArray(media.id, ids));
-  for (const row of rows) {
-    // Imported Cloudinary files are deleted from that Cloudinary account too.
-    if (isCloudinarySource(row.source)) await destroyCloudinaryMedia(row);
-    else await files.removePrefix(mediaKeys(row.id).prefix);
-  }
+  // Imported Cloudinary files are deleted from that Cloudinary account too.
+  for (const row of rows) await removeStoredMedia(row);
   await db.delete(media).where(inArray(media.id, ids));
 }
 
@@ -33,7 +30,12 @@ async function destroyAlbums(ids: string[]) {
   const files = await storage();
   const items = await db.select({ id: media.id }).from(media).where(inArray(media.albumId, ids));
   await destroyMedia(items.map((i) => i.id));
-  for (const id of ids) await files.removePrefix(`albums/${id}/`);
+  const rows = await db.select({ id: albums.id, musicKey: albums.musicKey }).from(albums).where(inArray(albums.id, ids));
+  for (const row of rows) {
+    if (row.musicKey) await files.remove(row.musicKey);
+    // Music uploaded before album folders lived under albums/<id>/.
+    await files.removePrefix(`albums/${row.id}/`);
+  }
   await db.delete(albums).where(inArray(albums.id, ids));
 }
 

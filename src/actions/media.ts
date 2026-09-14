@@ -10,6 +10,7 @@ import { logActivity } from "@/lib/activity";
 import { processMedia } from "@/lib/media-processing";
 import { assertAdmin, assertCanEditAlbum, isAdmin, PermissionError } from "@/lib/permissions";
 import { actionUser } from "@/lib/session";
+import { organizeAlbum } from "@/lib/storage-layout";
 
 async function loadEditable(ids: string[]) {
   const current = await actionUser();
@@ -33,6 +34,7 @@ export async function updateCaption(mediaId: string, caption: string) {
   });
 }
 
+/** Moves photos and videos to another album; their stored files follow into that album's folder. */
 export async function moveMedia(mediaIds: string[], targetAlbumId: string) {
   return run(async () => {
     const { current, rows } = await loadEditable(mediaIds);
@@ -45,6 +47,7 @@ export async function moveMedia(mediaIds: string[], targetAlbumId: string) {
     if (!target) throw new UserError("album_missing");
     await db.update(media).set({ albumId: targetAlbumId }).where(inArray(media.id, mediaIds));
     await db.update(albums).set({ coverMediaId: null }).where(inArray(albums.coverMediaId, mediaIds));
+    after(() => organizeAlbum(targetAlbumId).catch((error) => console.error(`Filing moved media into album ${targetAlbumId} failed`, error)));
     await logActivity(current.id, "media.move", "album", targetAlbumId, { count: mediaIds.length });
     for (const albumId of new Set([...rows.map((r) => r.albumId), targetAlbumId])) revalidatePath(`/albums/${albumId}`);
     revalidatePath("/albums");

@@ -155,6 +155,12 @@ export const media = pgTable(
     sizeBytes: bigint("size_bytes", { mode: "number" }),
     displayKey: text("display_key"),
     posterKey: text("poster_key"),
+    /**
+     * Where the original is filed in the album folders, e.g. "gallery-of-ours/Bali, August 2024/2024-08-17 18.32 IMG_2041.jpg":
+     * the R2 key, or a Cloudinary asset folder + display name. Unique per source (see lib/storage-layout). Null for Cloudinary
+     * imports, which stay in their own folders, and for files not filed yet.
+     */
+    storagePath: text("storage_path"),
     variants: jsonb("variants").$type<MediaVariants>().default({}).notNull(),
     width: integer("width"),
     height: integer("height"),
@@ -176,6 +182,7 @@ export const media = pgTable(
     index("media_taken_idx").on(t.takenAt),
     index("media_place_idx").on(t.placeId),
     index("media_deleted_idx").on(t.deletedAt),
+    index("media_storage_path_idx").on(t.source, t.storagePath),
   ],
 );
 

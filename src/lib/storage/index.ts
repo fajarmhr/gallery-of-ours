@@ -9,6 +9,9 @@ export interface StorageDriver {
   getBuffer(key: string): Promise<Buffer>;
   exists(key: string): Promise<boolean>;
   removePrefix(prefix: string): Promise<void>;
+  /** Copies one object inside the same storage, overwriting `to`. */
+  copy(from: string, to: string): Promise<void>;
+  remove(key: string): Promise<void>;
 }
 
 let driver: StorageDriver | null = null;
@@ -28,17 +31,23 @@ export async function storage(): Promise<StorageDriver> {
   return driver;
 }
 
+/** Top folder of the album folders, in R2 and in Cloudinary: "gallery-of-ours/<album>/<date name>". */
+export const ROOT_FOLDER = "gallery-of-ours";
+
 export type VariantName = "thumb" | "medium" | "large";
 
+/**
+ * Files the app makes for each photo or video (browser JPEGs and WebP sizes), kept by media id so they never move.
+ * Originals are filed in the album folders instead (lib/storage-layout); older ones still sit at `media/<id>/original.<ext>`.
+ */
 export const mediaKeys = (mediaId: string) => ({
   prefix: `media/${mediaId}/`,
+  /** Where originals went before album folders; the demo seed still writes here and `pnpm storage:organize` files them. */
   original: (ext: string) => `media/${mediaId}/original.${ext}`,
   display: `media/${mediaId}/display.jpg`,
   poster: `media/${mediaId}/poster.jpg`,
   variant: (name: VariantName) => `media/${mediaId}/${name}.webp`,
 });
-
-export const albumMusicKey = (albumId: string, ext: string) => `albums/${albumId}/music.${ext}`;
 
 const EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",

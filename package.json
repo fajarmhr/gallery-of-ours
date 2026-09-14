@@ -16,7 +16,9 @@
     "seed:remove": "tsx --env-file=.env.local scripts/remove-demo.ts",
     "seed:remove:prod": "tsx --env-file=.env.production.local scripts/remove-demo.ts",
     "create-superadmin": "tsx --env-file=.env.local scripts/create-superadmin.ts",
-    "create-superadmin:prod": "tsx --env-file=.env.production.local scripts/create-superadmin.ts"
+    "create-superadmin:prod": "tsx --env-file=.env.production.local scripts/create-superadmin.ts",
+    "storage:organize": "tsx --env-file=.env.local scripts/organize-storage.ts",
+    "storage:organize:prod": "tsx --env-file=.env.production.local scripts/organize-storage.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

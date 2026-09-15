@@ -2,6 +2,7 @@ import {
   Cake,
   CalendarDays,
   Earth,
+  HardDrive,
   Heart,
   Hourglass,
   House,
@@ -35,6 +36,7 @@ export const memoriesNav: NavItem[] = [
 export const adminNav: NavItem[] = [
   { href: "/family", key: "family", icon: Users },
   { href: "/trash", key: "trash", icon: Trash2 },
+  { href: "/storage", key: "storage", icon: HardDrive },
 ];
 
 export const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);

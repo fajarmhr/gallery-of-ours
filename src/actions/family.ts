@@ -1,9 +1,9 @@
 "use server";
 
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { albums, editGrants, session, user } from "@/db/schema";
+import { albums, editGrants, session, user, verification } from "@/db/schema";
 import { run, UserError } from "@/lib/action";
 import { logActivity } from "@/lib/activity";
 import { emails, sendEmail } from "@/lib/email";
@@ -66,6 +66,29 @@ export async function setUserRole(userId: string, role: Role) {
       await db.update(editGrants).set({ revokedAt: new Date() }).where(and(eq(editGrants.userId, userId), isNull(editGrants.revokedAt)));
     }
     await logActivity(current.id, "user.role", "user", userId, { from: target.role, to: role });
+    revalidatePath("/family");
+    return null;
+  });
+}
+
+/**
+ * Removes someone from the family gallery for good (superadmins only). Their sign-ins, favorites, comments, reactions and
+ * editing access go with the account; the photos, videos and albums they added stay, without an uploader name.
+ */
+export async function removeUser(userId: string) {
+  return run(async () => {
+    const current = await actionUser();
+    assertSuperadmin(current);
+    const target = await loadTarget(userId);
+    if (target.id === current.id) throw new UserError("forbidden");
+    // Another superadmin must be given a lower role first, so nobody at the top is removed by accident.
+    if (target.role === "superadmin") throw new UserError("forbidden");
+
+    // Password reset tokens keep the user id; email codes keep the address.
+    const codeIdentifiers = ["email-verification", "sign-in", "forget-password"].map((type) => `${type}-otp-${target.email}`);
+    await db.delete(verification).where(or(eq(verification.value, target.id), inArray(verification.identifier, codeIdentifiers)));
+    await db.delete(user).where(eq(user.id, target.id));
+    await logActivity(current.id, "user.remove", "user", target.id, { name: target.name, role: target.role });
     revalidatePath("/family");
     return null;
   });

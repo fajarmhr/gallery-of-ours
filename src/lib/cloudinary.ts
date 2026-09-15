@@ -80,6 +80,33 @@ const stillTransformation = (size: number, video: boolean) => ({
   quality: "auto",
 });
 
+/* ───────────── Usage ───────────── */
+
+export type CloudinaryUsage = {
+  plan: string | null;
+  storageBytes: number;
+  bandwidthBytes: number;
+  objects: number;
+  creditsUsed: number | null;
+  creditsLimit: number | null;
+  /** The day Cloudinary last counted, e.g. "2026-09-15"; the numbers aren't live to the minute. */
+  updatedAt: string | null;
+};
+
+/** Plan and usage for one account, as Cloudinary's Admin API reports them. */
+export async function cloudinaryUsage(cloudName: string): Promise<CloudinaryUsage> {
+  const result = await call(() => cloudinary.api.usage(credentials(accountFor(cloudName))));
+  return {
+    plan: typeof result?.plan === "string" ? result.plan : null,
+    storageBytes: Number(result?.storage?.usage ?? 0),
+    bandwidthBytes: Number(result?.bandwidth?.usage ?? 0),
+    objects: Number(result?.objects?.usage ?? result?.resources ?? 0),
+    creditsUsed: typeof result?.credits?.usage === "number" ? result.credits.usage : null,
+    creditsLimit: typeof result?.credits?.limit === "number" ? result.credits.limit : null,
+    updatedAt: typeof result?.last_updated === "string" ? result.last_updated : null,
+  };
+}
+
 /* ───────────── Delivery ───────────── */
 
 /** Signed URL for an imported (authenticated) asset. `variant` is thumb, medium, large, poster, original or download. */

@@ -452,6 +452,16 @@ export async function getInvites() {
   return rows.map((row) => ({ ...row, expiresAt: row.expiresAt.toISOString(), usedAt: row.usedAt?.toISOString() ?? null }));
 }
 
+/** Ready photos and videos outside the trash, per storage ("primary" or "cloudinary:<cloud name>"). */
+export async function getMediaCountsBySource() {
+  const rows = await db
+    .select({ source: media.source, count: sql<number>`count(*)::int` })
+    .from(media)
+    .where(and(eq(media.status, "ready"), isNull(media.deletedAt)))
+    .groupBy(media.source);
+  return new Map(rows.map((row) => [row.source, Number(row.count)]));
+}
+
 /* ───────────── Trash ───────────── */
 
 export async function getTrash() {

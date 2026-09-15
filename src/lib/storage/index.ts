@@ -12,6 +12,8 @@ export interface StorageDriver {
   /** Copies one object inside the same storage, overwriting `to`. */
   copy(from: string, to: string): Promise<void>;
   remove(key: string): Promise<void>;
+  /** Everything stored right now: originals, the sizes the app makes and story music. */
+  usage(): Promise<{ bytes: number; objects: number }>;
 }
 
 let driver: StorageDriver | null = null;

@@ -81,5 +81,19 @@ export function r2Driver(): StorageDriver {
     async remove(key) {
       await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
     },
+    async usage() {
+      let bytes = 0;
+      let objects = 0;
+      let token: string | undefined;
+      do {
+        const page = await client.send(new ListObjectsV2Command({ Bucket, ContinuationToken: token }));
+        for (const item of page.Contents ?? []) {
+          bytes += item.Size ?? 0;
+          objects += 1;
+        }
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      return { bytes, objects };
+    },
   };
 }

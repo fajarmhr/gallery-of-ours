@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { env } from "@/lib/env";
 import { signedParams } from "@/lib/signing";
@@ -56,6 +56,23 @@ export function localDriver(): StorageDriver {
     },
     async remove(key) {
       await rm(localPath(key), { force: true });
+    },
+    async usage() {
+      let bytes = 0;
+      let objects = 0;
+      const walk = async (dir: string): Promise<void> => {
+        const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+        for (const entry of entries) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) await walk(full);
+          else if (entry.isFile()) {
+            bytes += (await stat(full)).size;
+            objects += 1;
+          }
+        }
+      };
+      await walk(localRoot());
+      return { bytes, objects };
     },
   };
 }

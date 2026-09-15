@@ -19,6 +19,8 @@ export type InviteItem = {
   expiresAt: string;
   usedAt: string | null;
   usedByName: string | null;
+  /** "active" once the person entered their email code; "pending" while they still have to. */
+  usedByStatus: string | null;
   createdByName: string | null;
 };
 
@@ -161,7 +163,9 @@ export function InvitesList({ invites }: { invites: InviteItem[] }) {
         const expiresAt = new Date(invite.expiresAt).getTime();
         const usable = !invite.usedAt && expiresAt > now;
         const status = invite.usedAt
-          ? t("joined", { name: invite.usedByName ?? "—", date: format.dateTime(new Date(invite.usedAt), { dateStyle: "medium" }) })
+          ? invite.usedByStatus === "pending"
+            ? t("confirming", { name: invite.usedByName ?? "—" })
+            : t("joined", { name: invite.usedByName ?? "—", date: format.dateTime(new Date(invite.usedAt), { dateStyle: "medium" }) })
           : usable
             ? t("expiresIn", { count: Math.max(1, Math.ceil((expiresAt - now) / 86_400_000)) })
             : t("expired");

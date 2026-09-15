@@ -435,6 +435,7 @@ export async function getInvites() {
       expiresAt: invites.expiresAt,
       usedAt: invites.usedAt,
       usedByName: joined.name,
+      usedByStatus: joined.status,
       createdByName: user.name,
     })
     .from(invites)

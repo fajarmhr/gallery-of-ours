@@ -265,6 +265,7 @@
     "trashConfirm": "{count, plural, one {Move # item to the trash?} other {Move # items to the trash?}}",
     "trashed": "{count, plural, one {Tucked # item away in the trash} other {Tucked # items away in the trash}}",
     "downloadOriginal": "Download original",
+    "zoomReset": "Back to full photo",
     "undated": "No date",
     "you": "you",
     "lovedBy": "Loved by {names}",

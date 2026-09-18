@@ -16,7 +16,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { setAlbumCover } from "@/actions/albums";
 import { moveMedia, trashMedia } from "@/actions/media";
@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { SocialPanel } from "./comments";
 import type { MoveTarget } from "./media-grid";
 import { thumbhashDataUrl } from "./thumbhash-image";
+import { ZoomableImage } from "./zoomable-image";
 
 type Props = {
   items: MediaCard[];
@@ -53,8 +54,6 @@ type Props = {
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 /** Directions the small hearts of a burst fly out in. */
 const SPARKS = Array.from({ length: 8 }, (_, i) => (i / 8) * Math.PI * 2);
-/** Two taps closer together than this are a double tap. */
-const DOUBLE_TAP_MS = 320;
 
 export function MediaViewer({ items, index, morphId, onIndexChange, onClose, shareToken, readOnly, moveTargets }: Props) {
   const item = items[index]!;
@@ -74,7 +73,6 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   const [socialState, setSocialState] = useState<{ id: string; data: MediaSocial } | null>(null);
   const [socialVersion, setSocialVersion] = useState(0);
   const [burst, setBurst] = useState(0);
-  const lastTap = useRef(0);
   const social = socialState?.id === item.id ? socialState.data : null;
 
   const go = useCallback(
@@ -102,8 +100,13 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Safari otherwise zooms the whole page on a pinch. In here only the photo is allowed to grow.
+    const refuse = (event: Event) => event.preventDefault();
+    const gestures = ["gesturestart", "gesturechange", "gestureend"];
+    for (const gesture of gestures) document.addEventListener(gesture, refuse, { passive: false });
     return () => {
       document.body.style.overflow = previous;
+      for (const gesture of gestures) document.removeEventListener(gesture, refuse);
     };
   }, []);
 
@@ -152,11 +155,8 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   }
 
   /** A double tap on a photo favorites it. It never removes a favorite, so another double tap only bursts again. */
-  function onPhotoTap() {
-    const time = Date.now();
-    const isDouble = time - lastTap.current < DOUBLE_TAP_MS;
-    lastTap.current = isDouble ? 0 : time;
-    if (!isDouble || readOnly || !social) return;
+  function onPhotoDoubleTap() {
+    if (readOnly || !social) return;
     if (social.favorited) setBurst((n) => n + 1);
     else void onFavorite();
   }
@@ -276,7 +276,7 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
           </div>
         </div>
 
-        <div className="relative flex flex-1 items-center justify-center overflow-hidden">
+        <div className="relative flex flex-1 touch-none items-center justify-center overflow-hidden">
           <AnimatePresence initial={false} custom={direction} mode="popLayout">
             <motion.div
               key={item.id}
@@ -290,37 +290,28 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
               animate="center"
               exit="exit"
               transition={{ duration: 0.3, ease: EASE }}
-              drag={item.type === "photo" ? "x" : false}
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.5}
-              onDragEnd={(_, info) => {
-                if (info.offset.x < -80) go(1);
-                else if (info.offset.x > 80) go(-1);
-              }}
-              onTap={item.type === "photo" ? onPhotoTap : undefined}
-              className="flex h-full w-full items-center justify-center px-2 pb-28 pt-16 sm:px-14"
+              className="h-full w-full"
             >
               {item.type === "video" ? (
-                <video
-                  src={mediaUrl(item.id, "original", shareToken)}
-                  poster={mediaUrl(item.id, "large", shareToken)}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="max-h-full max-w-full rounded-lg bg-black"
-                />
+                <div className="flex h-full w-full items-center justify-center px-2 pb-28 pt-16 sm:px-14">
+                  <video
+                    src={mediaUrl(item.id, "original", shareToken)}
+                    poster={mediaUrl(item.id, "large", shareToken)}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="max-h-full max-w-full rounded-lg bg-black"
+                  />
+                </div>
               ) : (
-                <motion.img
+                <ZoomableImage
                   layoutId={item.id === morphId ? `media-${item.id}` : undefined}
                   src={mediaUrl(item.id, "large", shareToken)}
                   alt={caption ?? ""}
-                  draggable={false}
-                  className="max-h-full max-w-full select-none rounded-md object-contain shadow-2xl"
-                  style={{
-                    aspectRatio: `${item.width} / ${item.height}`,
-                    backgroundImage: thumbhashDataUrl(item.thumbhash) ? `url(${thumbhashDataUrl(item.thumbhash)})` : undefined,
-                    backgroundSize: "cover",
-                  }}
+                  aspectRatio={`${item.width} / ${item.height}`}
+                  poster={thumbhashDataUrl(item.thumbhash)}
+                  onDoubleTap={onPhotoDoubleTap}
+                  onSwipe={go}
                 />
               )}
             </motion.div>

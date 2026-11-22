@@ -6,6 +6,7 @@ import { albums, user as userTable } from "@/db/schema";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BottomBar } from "@/components/layout/bottom-bar";
 import { Topbar } from "@/components/layout/topbar";
+import { PageTransition } from "@/components/layout/page-transition";
 import { UploadProvider } from "@/components/upload/upload-context";
 import { cloudinaryAccountOptions } from "@/lib/cloudinary";
 import { editableScope, isAdmin } from "@/lib/permissions";
@@ -14,6 +15,7 @@ import { requireActiveUser } from "@/lib/session";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireActiveUser();
   const t = await getTranslations("nav");
+  const td = await getTranslations("design");
   const scope = await editableScope(user);
 
   const uploadAlbums =
@@ -48,6 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       canCreateAlbum={scope === "all"}
       storageOptions={uploadAlbums.length ? cloudinaryAccountOptions() : []}
     >
+      <a href="#main-content" className="skip-link">{td("skipToContent")}</a>
       <div className="flex min-h-dvh">
         <AppSidebar
           user={{ name: user.name, image: user.image, role: user.role }}
@@ -58,7 +61,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Suspense>
             <Topbar user={{ name: user.name, image: user.image }} />
           </Suspense>
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-32 pt-6 sm:px-6 lg:px-8 lg:pb-12">{children}</main>
+          <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1440px] flex-1 pb-[calc(7rem+env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-8 outline-none sm:pl-[max(2rem,env(safe-area-inset-left))] sm:pr-[max(2rem,env(safe-area-inset-right))] sm:pt-10 lg:pb-16 lg:pl-10 lg:pr-10 xl:pl-12 xl:pr-12">
+            <PageTransition>{children}</PageTransition>
+          </main>
         </div>
       </div>
       <BottomBar />

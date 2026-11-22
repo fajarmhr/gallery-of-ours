@@ -89,12 +89,13 @@
     "code_expired": "Kode sudah kedaluwarsa. Kirim kode baru.",
     "code_wait": "Kode baru saja dikirim. Tunggu sebentar sebelum meminta lagi.",
     "code_not_sent": "Kode belum bisa dikirim. Coba lagi sebentar lagi.",
-    "location_not_found": "Wilayah itu tidak ditemukan di peta. Coba pilihan yang lebih umum, misalnya kotanya saja."
+    "location_not_found": "Wilayah itu tidak ditemukan di peta. Coba pilihan yang lebih umum, misalnya kotanya saja.",
+    "heic_conversion_failed": "Foto ini belum bisa diproses. Ekspor sebagai JPEG lalu coba lagi."
   },
   "welcome": {
-    "note": "album keluarga pribadi",
-    "title": "Kenangan ini khusus untuk keluarga kami.",
-    "text": "Terima kasih sudah berkunjung. Semua foto di sini bersifat pribadi dan hanya dibagikan kepada anggota keluarga, jadi tidak ada yang bisa dilihat oleh pengunjung. Jika Anda bagian dari keluarga, silakan masuk atau minta akses, dan admin keluarga akan menyetujuinya.",
+    "note": "keluarga kita, dalam kenangan",
+    "title": "Cerita kecil kita, untuk selalu dikenang.",
+    "text": "Hari-hari sederhana, petualangan kecil, dan orang-orang tersayang. Tempat pribadi untuk menyimpan foto dan cerita keluarga, lalu menikmatinya kembali bersama.",
     "signIn": "Masuk",
     "requestAccess": "Minta akses",
     "small": "Akun baru ditinjau oleh admin keluarga sebelum foto apa pun ditampilkan.",
@@ -649,5 +650,13 @@
     "title": "Halaman ini tersesat",
     "text": "Halaman yang dicari tidak ada atau sudah pindah.",
     "home": "Ke beranda"
+  },
+  "design": {
+    "homeTitle": "Cerita kecil, kenangan selamanya.",
+    "familyOnly": "Hanya keluarga kita",
+    "addMemories": "Tambah kenangan",
+    "skipToContent": "Langsung ke konten",
+    "photoPreview": "Foto keluarga",
+    "videoPreview": "Video · buka untuk menonton"
   }
 }

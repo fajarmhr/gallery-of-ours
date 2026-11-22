@@ -89,12 +89,13 @@
     "code_expired": "That code has expired. Send a new one.",
     "code_wait": "A code was just sent. Wait a minute before asking for another.",
     "code_not_sent": "The code couldn't be sent right now. Try again in a moment.",
-    "location_not_found": "Couldn't find that area on the map. Try a broader choice, like only the city."
+    "location_not_found": "Couldn't find that area on the map. Try a broader choice, like only the city.",
+    "heic_conversion_failed": "This photo could not be prepared. Export it as JPEG and try again."
   },
   "welcome": {
-    "note": "a private family album",
-    "title": "These memories are just for our family.",
-    "text": "Thank you for stopping by. Every photo here is private and shared only with family members, so there's nothing to see for visitors. If you're part of the family, sign in or request access and a family admin will let you in.",
+    "note": "our family, remembered",
+    "title": "Our little life, beautifully remembered.",
+    "text": "The ordinary days, the little adventures, the people we love. A private place to keep our family’s photos and stories, and come back to them together.",
     "signIn": "Sign in",
     "requestAccess": "Request access",
     "small": "New accounts are reviewed by a family admin before any photo is shown.",
@@ -649,5 +650,13 @@
     "title": "This page wandered off",
     "text": "The page you're looking for doesn't exist or has moved.",
     "home": "Go home"
+  },
+  "design": {
+    "homeTitle": "A little life. A lot to remember.",
+    "familyOnly": "Just our family",
+    "addMemories": "Add memories",
+    "skipToContent": "Skip to content",
+    "photoPreview": "Family photo",
+    "videoPreview": "Video · open to watch"
   }
 }

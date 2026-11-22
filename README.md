@@ -2,9 +2,19 @@
 
 A private family memories app: albums as polaroid piles, a justified photo grid, story mode with music, On this day, places map and 3D globe, year recaps, time capsules, milestones and share links. Visitors see no photos at all, only a polite family-only message. English and Bahasa Indonesia, earthy light and warm dark themes, installable on phones.
 
-**Stack:** Next.js 16 (App Router, Turbopack) · React 19 · Tailwind CSS 4 · shadcn/ui · Motion · Better Auth · Neon Postgres + Drizzle · Cloudflare R2 · Resend · next-intl · MapLibre · Claude Haiku 4.5 (optional captions)
+**Stack:** Node.js 26 LTS · pnpm 12 · Next.js 16.4 (App Router, Webpack) · React 19.3 · TypeScript 6 · Tailwind CSS 4.3 · shadcn/ui · Motion 14 · Better Auth · Neon Postgres + Drizzle · Cloudflare R2 · Resend · next-intl · MapLibre · Claude Haiku 4.5 (optional captions)
 
 ## Run it locally
+
+Use **pnpm 12.21.0** (`packageManager` pins it). On Windows, update an older pnpm installation with `npm.cmd install --global pnpm@12.21.0`; older pnpm launchers can fail when switching automatically to pnpm 12.
+
+`pnpm install` provisions the project's **Node.js 26.13.1 LTS** runtime from `devEngines.runtime` and verifies the locked download. `pnpm dev`, `pnpm build`, and other pnpm scripts use this runtime automatically. Check it with `pnpm exec node --version`. `.nvmrc` also pins the same version for developers using nvm.
+
+TypeScript stays on the current compatible 6.0 release because the Next.js type checker and ESLint integrations require its JavaScript compiler API. Dependency versions are locked in `pnpm-lock.yaml`; CI should use `pnpm install --frozen-lockfile`.
+
+The interface uses warm paper tones, Newsreader headings, and locally hosted fonts in `src/app/fonts` with their OFL licenses. Font downloads are not needed during builds. Motion respects the device's reduced-motion preference.
+
+Development and production builds use Next.js's supported `--webpack` option: Turbopack's PostCSS worker exits prematurely on this Windows/Node setup. This keeps the current stable Next.js release while providing a working build.
 
 ```bash
 pnpm install
@@ -59,7 +69,7 @@ New sign-ups confirm their email, then wait on a "Waiting for a family admin" sc
 
 ## Deploy to Vercel
 
-1. Push the repo and import it on Vercel. Add every variable above, with `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` set to your domain.
+1. Push the repo and import it on Vercel. Use Node.js 26.x (also declared in `package.json`). Add every variable above, with `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` set to your domain.
 2. **Cloudflare R2:** create a bucket and an API token with object read and write. Add a CORS rule so browsers can upload directly:
    ```json
    [{ "AllowedOrigins": ["https://your-domain.com"], "AllowedMethods": ["GET", "PUT"], "AllowedHeaders": ["Content-Type"], "MaxAgeSeconds": 3600 }]
@@ -76,6 +86,7 @@ Scripts ending in `:prod` read `.env.production.local`; the others read `.env.lo
 | --- | --- |
 | `pnpm dev` / `pnpm build` / `pnpm start` | Develop, build, run |
 | `pnpm typecheck` / `pnpm lint` | Type and lint checks |
+| `pnpm test:upload` | iPhone MIME, HEIC preparation, video fallback, and preview regression checks |
 | `pnpm db:push` / `pnpm db:studio` | Sync the schema, browse the database |
 | `pnpm seed:demo` / `pnpm seed:remove` | Add or remove the demo family |
 | `pnpm create-superadmin` | Create or promote a superadmin |

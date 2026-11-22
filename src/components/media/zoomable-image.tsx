@@ -41,6 +41,8 @@ type Props = {
  */
 export function ZoomableImage({ src, alt, layoutId, aspectRatio, poster, onDoubleTap, onSwipe }: Props) {
   const t = useTranslations("media");
+  const tc = useTranslations("common");
+  const te = useTranslations("errors");
   const surface = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const image = useRef<HTMLImageElement>(null);
@@ -48,6 +50,9 @@ export function ZoomableImage({ src, alt, layoutId, aspectRatio, poster, onDoubl
   const y = useMotionValue(0);
   const scale = useMotionValue(1);
   const [level, setLevel] = useState(1);
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   const pointers = useRef(new Map<number, Point>());
   const gesture = useRef<"none" | "tap" | "pan" | "swipe" | "pinch">("none");
@@ -117,6 +122,14 @@ export function ZoomableImage({ src, alt, layoutId, aspectRatio, poster, onDoubl
     animate(scale, 1, SPRING);
     setLevel(1);
   }, [scale, x, y]);
+
+  useEffect(() => {
+    const el = surface.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => apply(scale.get(), x.get(), y.get()));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [apply, scale, x, y]);
 
   // A different photo comes up at its normal size on its own: the viewer keys this component by media id, so it remounts.
   useEffect(() => {
@@ -242,7 +255,7 @@ export function ZoomableImage({ src, alt, layoutId, aspectRatio, poster, onDoubl
   return (
     <div
       ref={surface}
-      className="relative flex h-full w-full touch-none items-center justify-center px-2 pb-28 pt-16 sm:px-14"
+      className="relative flex h-full w-full touch-none items-center justify-center px-[max(.5rem,env(safe-area-inset-left))] pr-[max(.5rem,env(safe-area-inset-right))] pb-[calc(8rem+env(safe-area-inset-bottom))] pt-[calc(4.5rem+env(safe-area-inset-top))] sm:pl-[max(3.5rem,env(safe-area-inset-left))] sm:pr-[max(3.5rem,env(safe-area-inset-right))] landscape:pb-[calc(5rem+env(safe-area-inset-bottom))] landscape:pt-[calc(4rem+env(safe-area-inset-top))]"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -250,18 +263,40 @@ export function ZoomableImage({ src, alt, layoutId, aspectRatio, poster, onDoubl
     >
       <motion.div ref={frame} style={{ x, y, scale }} className="flex h-full w-full items-center justify-center">
         <motion.img
+          key={attempt}
           ref={image}
           layoutId={layoutId}
           src={src}
           alt={alt}
           draggable={false}
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
           className={cn(
             "max-h-full max-w-full select-none rounded-md object-contain shadow-2xl",
             zoomed ? "cursor-grab" : "cursor-zoom-in",
+            failed && "invisible",
           )}
           style={{ aspectRatio, backgroundImage: poster ? `url(${poster})` : undefined, backgroundSize: "cover" }}
         />
       </motion.div>
+
+      {!loaded && !failed ? <p role="status" className="pointer-events-none absolute text-sm text-white/75">{tc("loading")}</p> : null}
+      {failed ? (
+        <div role="alert" className="absolute flex max-w-xs flex-col items-center gap-3 rounded-xl bg-[#211e1b] p-5 text-center text-sm">
+          <p>{te("unknown")}</p>
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border border-white/25 px-4 hover:bg-white/10"
+            onPointerDown={(event) => event.stopPropagation()}
+            onPointerUp={(event) => event.stopPropagation()}
+            onClick={() => {
+              setFailed(false);
+              setLoaded(false);
+              setAttempt((value) => value + 1);
+            }}
+          >{tc("retry")}</button>
+        </div>
+      ) : null}
 
       <AnimatePresence>
         {zoomed ? (
@@ -276,7 +311,7 @@ export function ZoomableImage({ src, alt, layoutId, aspectRatio, poster, onDoubl
             initial={{ opacity: 0, y: -8, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: -8, x: "-50%" }}
-            className="glass absolute left-1/2 top-16 z-20 rounded-full px-3 py-1 text-xs tabular-nums text-white"
+            className="glass absolute left-1/2 top-[calc(4rem+env(safe-area-inset-top))] z-20 min-h-11 rounded-lg px-4 text-sm tabular-nums text-white"
           >
             {level}&times;
           </motion.button>

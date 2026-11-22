@@ -11,7 +11,7 @@ export async function AlbumGrid({ albums }: { albums: AlbumOverview[] }) {
   const locale = await getLocale();
 
   return (
-    <div className="grid grid-cols-2 gap-x-2 gap-y-1 sm:grid-cols-3 sm:gap-x-4 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 sm:gap-x-8 xl:gap-x-12">
       {albums.map((album) => {
         const meta = album.locked
           ? t("lockedTitle", { date: format.dateTime(new Date(album.unlockAt!), { dateStyle: "medium" }) })
@@ -20,12 +20,12 @@ export async function AlbumGrid({ albums }: { albums: AlbumOverview[] }) {
           <Link
             key={album.id}
             href={`/albums/${album.id}`}
-            className="group flex flex-col gap-1 rounded-3xl px-2.5 pb-4 pt-7 outline-none transition-colors hover:bg-foreground/5 focus-visible:ring-3 focus-visible:ring-ring sm:px-4"
+            className="group flex min-w-0 flex-col gap-1.5 rounded-lg px-1 pb-3 pt-8 outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <AlbumPile covers={album.covers.map((c) => mediaUrl(c.id, "thumb"))} locked={album.locked} className="mx-auto mb-6 w-[70%] sm:w-[62%]" />
-            {album.note ? <span className="font-hand text-lg leading-tight text-note">{album.note}</span> : null}
-            <span className="font-display text-base font-bold leading-snug tracking-tight sm:text-lg">{album.title}</span>
-            <span className="text-xs text-muted-foreground tabular-nums sm:text-sm">{meta}</span>
+            <AlbumPile covers={album.covers.map((c) => mediaUrl(c.id, "medium"))} locked={album.locked} className="mx-auto mb-7 w-[82%]" />
+            {album.note ? <span className="text-sm leading-relaxed text-note">{album.note}</span> : null}
+            <span className="font-display text-[1.4rem] font-medium leading-tight tracking-tight sm:text-[1.7rem]">{album.title}</span>
+            <span className="text-xs leading-relaxed text-muted-foreground tabular-nums sm:text-sm">{meta}</span>
           </Link>
         );
       })}

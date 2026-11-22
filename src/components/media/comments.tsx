@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Send, Sparkles, Trash2, X } from "lucide-react";
+import { LoaderCircle, Pencil, Send, Sparkles, Trash2, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
@@ -21,11 +21,13 @@ const REACTION_EMOJI: Record<string, string> = { heart: "❤️", laugh: "😂",
 export function SocialPanel({
   item,
   social,
+  loadError = false,
   onChanged,
   onClose,
 }: {
   item: MediaCard;
   social: MediaSocial | null;
+  loadError?: boolean;
   onChanged: () => void;
   onClose: () => void;
 }) {
@@ -38,6 +40,9 @@ export function SocialPanel({
 
   const [comment, setComment] = useState("");
   const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [reacting, setReacting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [caption, setCaption] = useState(item.caption ?? "");
   /** The reaction just added, whose emoji floats up once. */
@@ -47,31 +52,66 @@ export function SocialPanel({
   const aiText = locale === "id" ? item.aiCaption?.id : item.aiCaption?.en;
 
   async function react(kind: string) {
+    if (!social || reacting) return;
+    setReacting(true);
     if (!social?.reactions.find((reaction) => reaction.kind === kind)?.mine) {
       setPopped((previous) => ({ kind, key: (previous?.key ?? 0) + 1 }));
     }
-    const result = await toggleReaction(item.id, kind);
-    if (!result.ok) return fail(result.error);
-    onChanged();
+    try {
+      const result = await toggleReaction(item.id, kind);
+      if (!result.ok) return fail(result.error);
+      onChanged();
+    } catch {
+      fail("network");
+    } finally {
+      setReacting(false);
+    }
   }
 
   async function send(event: React.FormEvent) {
     event.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() || sending || !social) return;
     setSending(true);
-    const result = await addComment(item.id, comment);
-    setSending(false);
-    if (!result.ok) return fail(result.error);
-    setComment("");
-    onChanged();
+    try {
+      const result = await addComment(item.id, comment);
+      if (!result.ok) return fail(result.error);
+      setComment("");
+      onChanged();
+    } catch {
+      fail("network");
+    } finally {
+      setSending(false);
+    }
   }
 
   async function saveCaption() {
-    const result = await updateCaption(item.id, caption);
-    if (!result.ok) return fail(result.error);
-    toast.success(t("captionSaved"));
-    setEditing(false);
-    router.refresh();
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await updateCaption(item.id, caption);
+      if (!result.ok) return fail(result.error);
+      toast.success(t("captionSaved"));
+      setEditing(false);
+      router.refresh();
+    } catch {
+      fail("network");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeComment(id: string) {
+    if (deleting) return;
+    setDeleting(id);
+    try {
+      const result = await deleteComment(id);
+      if (!result.ok) return fail(result.error);
+      onChanged();
+    } catch {
+      fail("network");
+    } finally {
+      setDeleting(null);
+    }
   }
 
   const details = [
@@ -82,33 +122,41 @@ export function SocialPanel({
   ].filter((row): row is [string, string] => Boolean(row[1]));
 
   return (
-    <div className="flex min-h-full flex-col">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-card px-4 py-3">
+    <div className="flex min-h-full min-w-0 flex-col">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b bg-card px-[max(1rem,env(safe-area-inset-left))] py-2 pr-[max(1rem,env(safe-area-inset-right))] lg:pt-[max(.5rem,env(safe-area-inset-top))]">
         <p className="font-display text-lg font-bold">{t("info")}</p>
-        <button type="button" onClick={onClose} aria-label={tc("close")} className="grid size-9 place-items-center rounded-lg hover:bg-foreground/5">
+        <button type="button" onClick={onClose} aria-label={tc("close")} className="grid size-11 shrink-0 place-items-center rounded-lg hover:bg-foreground/5">
           <X className="size-5" />
         </button>
       </div>
 
-      <div className="flex flex-col gap-5 p-4">
+      <div className="flex min-w-0 flex-col gap-5 px-[max(1rem,env(safe-area-inset-left))] py-4 pr-[max(1rem,env(safe-area-inset-right))]">
+        {loadError ? (
+          <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-muted p-3 text-sm">
+            <p className="flex-1">{te("network")}</p>
+            <Button variant="outline" onClick={onChanged}>{tc("retry")}</Button>
+          </div>
+        ) : !social ? (
+          <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />{tc("loading")}</p>
+        ) : null}
         <section>
           {editing ? (
             <div className="flex flex-col gap-2">
-              <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder={t("captionPlaceholder")} maxLength={500} rows={3} autoFocus />
+              <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} aria-label={t("caption")} placeholder={t("captionPlaceholder")} className="text-base" maxLength={500} rows={3} disabled={saving} autoFocus />
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setEditing(false)}>
+                <Button variant="ghost" disabled={saving} onClick={() => setEditing(false)}>
                   {tc("cancel")}
                 </Button>
-                <Button onClick={saveCaption}>{tc("save")}</Button>
+                <Button onClick={saveCaption} disabled={saving}>{saving ? <LoaderCircle className="size-4 animate-spin" /> : null}{tc("save")}</Button>
               </div>
             </div>
           ) : (
             <div className="flex items-start gap-2">
-              <p className={cn("flex-1 font-display text-xl font-bold leading-snug", !item.caption && "text-muted-foreground")}>
+              <p className={cn("min-w-0 flex-1 break-words font-display text-xl font-bold leading-snug", !item.caption && "text-muted-foreground")}>
                 {item.caption ?? (social?.canEdit ? t("addCaption") : "")}
               </p>
               {social?.canEdit ? (
-                <button type="button" onClick={() => setEditing(true)} aria-label={t("addCaption")} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-foreground/5">
+                <button type="button" onClick={() => setEditing(true)} aria-label={t("addCaption")} className="grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-foreground/5">
                   <Pencil className="size-4" />
                 </button>
               ) : null}
@@ -128,7 +176,7 @@ export function SocialPanel({
           {details.map(([label, value]) => (
             <div key={label} className="contents">
               <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-medium">{value}</dd>
+              <dd className="min-w-0 break-words font-medium">{value}</dd>
             </div>
           ))}
         </dl>
@@ -142,8 +190,9 @@ export function SocialPanel({
                   onClick={() => react(reaction.kind)}
                   aria-pressed={reaction.mine}
                   aria-label={t(`reactions.${reaction.kind}`)}
+                  disabled={reacting}
                   className={cn(
-                    "relative inline-flex h-9 items-center gap-1 rounded-full border px-3 text-sm font-semibold transition-colors",
+                    "relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border px-3 text-sm font-semibold transition-colors disabled:opacity-60",
                     reaction.mine ? "border-primary bg-accent text-accent-foreground" : "bg-background hover:bg-foreground/5",
                   )}
                 >
@@ -186,14 +235,11 @@ export function SocialPanel({
                   <button
                     type="button"
                     aria-label={t("deleteComment")}
-                    onClick={async () => {
-                      const result = await deleteComment(c.id);
-                      if (!result.ok) return fail(result.error);
-                      onChanged();
-                    }}
-                    className="grid size-8 shrink-0 place-items-center self-center rounded-lg text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
+                    onClick={() => removeComment(c.id)}
+                    disabled={deleting !== null}
+                    className="grid size-11 shrink-0 place-items-center self-center rounded-lg text-muted-foreground transition-opacity hover:text-destructive disabled:opacity-50 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                   >
-                    <Trash2 className="size-4" />
+                    {deleting === c.id ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                   </button>
                 ) : null}
               </li>
@@ -202,16 +248,19 @@ export function SocialPanel({
         </section>
       </div>
 
-      <form onSubmit={send} className="sticky bottom-0 mt-auto flex gap-2 border-t bg-card p-3">
+      <form onSubmit={send} className="sticky bottom-0 mt-auto flex shrink-0 gap-2 border-t bg-card px-[max(.75rem,env(safe-area-inset-left))] pb-[max(.75rem,env(safe-area-inset-bottom))] pr-[max(.75rem,env(safe-area-inset-right))] pt-3">
         <input
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder={t("writeComment")}
+          aria-label={t("writeComment")}
+          enterKeyHint="send"
+          disabled={sending || !social}
           maxLength={1000}
-          className="h-10 min-w-0 flex-1 rounded-xl border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          className="h-11 min-w-0 flex-1 rounded-lg border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
         />
-        <Button type="submit" size="icon-lg" disabled={sending || !comment.trim()} aria-label={t("send")} className="size-10 rounded-xl">
-          <Send />
+        <Button type="submit" size="icon-lg" disabled={sending || !comment.trim() || !social} aria-label={t("send")} className="size-11 shrink-0 rounded-lg">
+          {sending ? <LoaderCircle className="animate-spin" /> : <Send />}
         </Button>
       </form>
     </div>

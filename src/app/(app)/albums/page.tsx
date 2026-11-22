@@ -50,15 +50,15 @@ export default async function AlbumsPage({ searchParams }: PageProps<"/albums">)
         </EmptyState>
       ) : (
         <>
-          <nav className="mb-3 flex flex-wrap gap-2" aria-label={t("fieldCategory")}>
+          <nav className="mb-6 flex flex-wrap gap-x-5 gap-y-1 border-b" aria-label={t("fieldCategory")}>
             {CATEGORIES.map((c) => (
               <Link
                 key={c}
                 href={c === "all" ? "/albums" : `/albums?c=${c}`}
                 aria-current={category === c ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-9 items-center rounded-full border px-4 text-sm font-semibold transition-colors",
-                  category === c ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:border-muted-foreground hover:text-foreground",
+                  "-mb-px inline-flex min-h-11 items-center border-b-2 px-1 pb-2 text-sm font-medium transition-colors duration-200",
+                  category === c ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:border-input hover:text-foreground",
                 )}
               >
                 {t(c)}

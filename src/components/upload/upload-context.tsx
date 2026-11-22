@@ -1,16 +1,16 @@
 "use client";
 
-import { CircleAlert, CircleCheck, LoaderCircle, Upload, X } from "lucide-react";
+import { CircleAlert, CircleCheck, ImageIcon, LoaderCircle, Play, RotateCcw, Upload, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
-import { finishUpload, startUploads } from "@/actions/upload";
+import { cancelUpload, finishUpload, startUploads } from "@/actions/upload";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { isSupportedFile, postWithProgress, prepareFile, putWithProgress, type PreparedFile } from "./prepare-file";
@@ -32,7 +32,7 @@ export function useUpload() {
   return value;
 }
 
-/** Files prepared and uploaded at the same time. */
+/** Transfers can overlap, but full-resolution decoding is serialized to fit phone memory. */
 const CONCURRENCY = 3;
 /** R2, the default storage. */
 const PRIMARY_STORAGE = "primary";
@@ -51,8 +51,12 @@ export function UploadProvider({
   const t = useTranslations("upload");
   const ts = useTranslations("storage");
   const te = useTranslations("errors");
+  const tc = useTranslations("common");
   const format = useFormatter();
   const router = useRouter();
+  const albumFieldId = useId();
+  const storageFieldId = useId();
+  const returnFocus = useRef<HTMLElement | null>(null);
 
   const [isOpen, setOpen] = useState(false);
   const [albumId, setAlbumId] = useState("");
@@ -63,11 +67,16 @@ export function UploadProvider({
   const inputRef = useRef<HTMLInputElement>(null);
   const jobs = useRef<Job[]>([]);
   const running = useRef(0);
+  const preparation = useRef<Promise<void>>(Promise.resolve());
+  const previewUrls = useRef(new Set<string>());
+  const retryJobs = useRef(new Map<string, Job>());
+  const arrivals = useRef(0);
   /** Files finished since the last arrival, with the album they went to. */
   const batch = useRef<{ albumId: string; preview: string | null }[]>([]);
 
   const open = useCallback(
     (preselect?: string) => {
+      returnFocus.current = document.activeElement as HTMLElement | null;
       if (preselect && albums.some((a) => a.id === preselect)) setAlbumId(preselect);
       else setAlbumId((current) => (albums.some((a) => a.id === current) ? current : (albums[0]?.id ?? "")));
       setOpen(true);
@@ -75,20 +84,30 @@ export function UploadProvider({
     [albums],
   );
 
-  useEffect(
-    () => () => {
-      queue.forEach((item) => item.prepared?.previewUrl && URL.revokeObjectURL(item.prepared.previewUrl));
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  useEffect(() => {
+    const urls = previewUrls.current;
+    const retries = retryJobs.current;
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+      urls.clear();
+      retries.clear();
+    };
+  }, []);
 
   const update = (clientId: string, patch: Partial<QueueItem>) =>
     setQueue((items) => items.map((item) => (item.clientId === clientId ? { ...item, ...patch } : item)));
 
   async function runJob({ clientId, file, albumId: target, storageId: store }: Job) {
+    let pendingMediaId: string | null = null;
     try {
-      const prepared = await prepareFile(file, (stage) => update(clientId, { stage }));
+      const task = preparation.current.then(() => prepareFile(
+        file,
+        (stage) => update(clientId, { stage }),
+        { portableDisplay: store === PRIMARY_STORAGE },
+      ));
+      preparation.current = task.then(() => undefined, () => undefined);
+      const prepared = await task;
+      if (prepared.previewUrl) previewUrls.current.add(prepared.previewUrl);
       update(clientId, { prepared, stage: "uploading", progress: 0 });
 
       const started = await startUploads(
@@ -115,6 +134,7 @@ export function UploadProvider({
       );
       if (!started.ok) throw new Error(started.error);
       const targets = started.data[0]!;
+      pendingMediaId = targets.mediaId;
 
       let uploaded: { publicId: string } | undefined;
       if (targets.cloudinary) {
@@ -140,10 +160,19 @@ export function UploadProvider({
       update(clientId, { stage: "finishing", progress: 100 });
       const done = await finishUpload(targets.mediaId, uploaded);
       if (!done.ok) throw new Error(done.error);
-      update(clientId, { stage: "done" });
+      // Keep just the small preview in the queue, rather than retaining each converted photo.
+      update(clientId, { stage: "done", prepared: { ...prepared, display: null, poster: null } });
+      retryJobs.current.delete(clientId);
       batch.current.push({ albumId: target, preview: prepared.previewUrl ?? null });
     } catch (error) {
+      if (pendingMediaId) await cancelUpload(pendingMediaId).catch(() => undefined);
       const code = error instanceof Error ? error.message : "unknown";
+      retryJobs.current.set(clientId, { clientId, file, albumId: target, storageId: store });
+      setQueue((items) => items.map((item) =>
+        item.clientId === clientId && item.prepared
+          ? { ...item, prepared: { ...item.prepared, display: null, poster: null } }
+          : item,
+      ));
       update(clientId, { stage: "failed", error: te.has(code) ? te(code) : te("unknown") });
     }
   }
@@ -156,7 +185,7 @@ export function UploadProvider({
     for (const entry of added) perAlbum.set(entry.albumId, (perAlbum.get(entry.albumId) ?? 0) + 1);
     const target = [...perAlbum.entries()].sort((a, b) => b[1] - a[1])[0]![0];
     setArrival({
-      id: Date.now(),
+      id: ++arrivals.current,
       count: added.length,
       albumId: target,
       title: albums.find((album) => album.id === target)?.title ?? "",
@@ -187,12 +216,38 @@ export function UploadProvider({
       toast.error(te("unsupported_file"));
       return;
     }
+    if (accepted.length > 200) {
+      toast.error(te("too_many_files"));
+      return;
+    }
+    if (accepted.some((file) => file.size > 5 * 1024 * 1024 * 1024)) {
+      toast.error(te("file_too_large"));
+      return;
+    }
     const store = storageOptions.some((option) => option.id === storageId) ? storageId : PRIMARY_STORAGE;
     // crypto.randomUUID only exists on https and localhost, not when the dev server is opened over Tailscale or the LAN.
     const newId = () => (typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
     const items = accepted.map((file) => ({ clientId: newId(), name: file.name, stage: "reading" as Stage, progress: 0 }));
     setQueue((current) => [...items, ...current]);
     accepted.forEach((file, i) => jobs.current.push({ clientId: items[i]!.clientId, file, albumId, storageId: store }));
+    pump();
+  }
+
+  function removePreview(item: QueueItem) {
+    const url = item.prepared?.previewUrl;
+    if (url) {
+      URL.revokeObjectURL(url);
+      previewUrls.current.delete(url);
+    }
+  }
+
+  function retry(item: QueueItem) {
+    const job = retryJobs.current.get(item.clientId);
+    if (!job) return;
+    retryJobs.current.delete(item.clientId);
+    removePreview(item);
+    update(item.clientId, { prepared: undefined, error: undefined, stage: "reading", progress: 0 });
+    jobs.current.push(job);
     pump();
   }
 
@@ -220,13 +275,28 @@ export function UploadProvider({
     <UploadContext.Provider value={{ open }}>
       {children}
       <Sheet open={isOpen} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full gap-0 overflow-y-auto sm:max-w-lg">
-          <SheetHeader className="border-b">
-            <SheetTitle className="font-display text-2xl font-extrabold tracking-tight">{t("title")}</SheetTitle>
-            <SheetDescription>{t("footer")}</SheetDescription>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            returnFocus.current?.focus({ preventScroll: true });
+          }}
+          className="gap-0 overflow-y-auto overscroll-contain data-[side=right]:w-full sm:data-[side=right]:max-w-lg"
+        >
+          <SheetHeader className="sticky top-0 z-10 shrink-0 border-b bg-popover pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))]">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="font-display text-3xl font-medium tracking-tight">{t("title")}</SheetTitle>
+                <SheetDescription>{t("footer")}</SheetDescription>
+              </div>
+              <SheetClose asChild>
+                <Button type="button" size="icon-lg" variant="ghost" aria-label={tc("close")} className="size-11 shrink-0"><X /></Button>
+              </SheetClose>
+            </div>
           </SheetHeader>
 
-          <div className="flex flex-col gap-4 p-4">
+          <div className="flex min-w-0 flex-col gap-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {arrival ? <ArrivalCard key={arrival.id} arrival={arrival} onOpen={openArrival} onClose={closeArrival} /> : null}
 
             {albums.length === 0 ? (
@@ -234,9 +304,9 @@ export function UploadProvider({
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold">{t("addTo")}</span>
+                  <label htmlFor={albumFieldId} className="text-sm font-semibold">{t("addTo")}</label>
                   <Select value={albumId} onValueChange={setAlbumId}>
-                    <SelectTrigger className="h-11 w-full rounded-xl">
+                    <SelectTrigger id={albumFieldId} className="h-11 w-full min-w-0 rounded-lg">
                       <SelectValue placeholder={t("pickAlbum")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -251,9 +321,9 @@ export function UploadProvider({
 
                 {storageOptions.length > 0 ? (
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-sm font-semibold">{ts("label")}</span>
+                    <label htmlFor={storageFieldId} className="text-sm font-semibold">{ts("label")}</label>
                     <Select value={storageId} onValueChange={setStorageId}>
-                      <SelectTrigger className="h-11 w-full rounded-xl">
+                      <SelectTrigger id={storageFieldId} className="h-11 w-full min-w-0 rounded-lg">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -288,15 +358,17 @@ export function UploadProvider({
                   <Upload className="size-8 text-primary" />
                   <p className="mt-2 font-semibold">{t("drop")}</p>
                   <p className="text-sm text-muted-foreground">{t("types")}</p>
-                  <Button type="button" className="mt-4 h-10 rounded-xl px-5" onClick={() => inputRef.current?.click()}>
+                  <Button type="button" className="mt-4 h-11 rounded-lg px-5" onClick={() => inputRef.current?.click()}>
                     {t("choose")}
                   </Button>
                   <input
                     ref={inputRef}
                     type="file"
                     multiple
-                    accept="image/*,video/*,.heic,.heif"
-                    className="hidden"
+                    accept="image/*,video/*,.heic,.heif,.hif,.mov,.mp4,.m4v"
+                    aria-label={t("choose")}
+                    tabIndex={-1}
+                    className="sr-only"
                     onChange={(event) => {
                       if (event.target.files) addFiles(event.target.files);
                       event.target.value = "";
@@ -304,10 +376,10 @@ export function UploadProvider({
                   />
                 </div>
 
-                {busy ? <p className="text-xs text-muted-foreground">{t("keepOpen")}</p> : null}
+                {busy ? <p role="status" className="text-sm text-muted-foreground">{t("keepOpen")}</p> : null}
 
                 {queue.length > 0 ? (
-                  <ul className="flex flex-col gap-2">
+                  <ul className="flex min-w-0 flex-col gap-2">
                     {queue.map((item) => {
                       const p = item.prepared;
                       return (
@@ -316,6 +388,10 @@ export function UploadProvider({
                             {p?.previewUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={p.previewUrl} alt="" className="size-full object-cover" />
+                            ) : item.stage === "done" ? (
+                              p?.type === "video" ? <Play className="size-5 text-muted-foreground" /> : <ImageIcon className="size-5 text-muted-foreground" />
+                            ) : item.stage === "failed" ? (
+                              <CircleAlert className="size-5 text-destructive" />
                             ) : (
                               <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
                             )}
@@ -335,7 +411,7 @@ export function UploadProvider({
                               </span>
                             ) : null}
                             {item.stage === "uploading" ? <Progress value={item.progress} className="mt-2 h-1.5" /> : null}
-                            <span className={cn("mt-1 block text-xs text-muted-foreground", item.stage === "failed" && "text-destructive")}>
+                            <span role={item.stage === "failed" ? "alert" : undefined} className={cn("mt-1 block break-words text-xs text-muted-foreground", item.stage === "failed" && "text-destructive")}>
                               {stageLabel(item)}
                             </span>
                           </span>
@@ -343,14 +419,28 @@ export function UploadProvider({
                             {item.stage === "done" ? (
                               <CircleCheck className="size-5 text-olive" />
                             ) : item.stage === "failed" ? (
-                              <button
-                                type="button"
-                                aria-label={t("remove")}
-                                onClick={() => setQueue((q) => q.filter((i) => i.clientId !== item.clientId))}
-                                className="grid size-8 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
-                              >
-                                <X className="size-4" />
-                              </button>
+                              <span className="flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  aria-label={`${tc("retry")}: ${item.name}`}
+                                  onClick={() => retry(item)}
+                                  className="grid size-11 place-items-center rounded-lg hover:bg-foreground/5"
+                                >
+                                  <RotateCcw className="size-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={t("remove")}
+                                  onClick={() => {
+                                    retryJobs.current.delete(item.clientId);
+                                    removePreview(item);
+                                    setQueue((q) => q.filter((i) => i.clientId !== item.clientId));
+                                  }}
+                                  className="grid size-11 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                                >
+                                  <X className="size-4" />
+                                </button>
+                              </span>
                             ) : item.stage === "uploading" || item.stage === "finishing" ? null : (
                               <CircleAlert className="size-5 opacity-0" />
                             )}
@@ -399,11 +489,11 @@ function ArrivalCard({ arrival, floating = false, onOpen, onClose }: { arrival: 
       exit={{ opacity: 0, y: 16 }}
       transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
       className={cn(
-        "flex items-center gap-4 rounded-3xl border bg-card p-4 text-card-foreground",
-        floating ? "fixed inset-x-4 bottom-24 z-[60] shadow-2xl sm:left-auto sm:right-6 sm:w-[380px] lg:bottom-6" : "shadow-sm",
+        "flex items-center gap-3 overflow-y-auto rounded-xl border bg-card p-4 text-card-foreground",
+        floating ? "fixed inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[60] max-h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:w-[380px] lg:bottom-[max(1.5rem,env(safe-area-inset-bottom))]" : "",
       )}
     >
-      <span className="grid size-20 shrink-0 place-items-center">
+      <span className="grid size-16 shrink-0 place-items-center sm:size-20">
         {arrival.previews.length ? (
           arrival.previews.map((src, i) => {
             const pose = PRINT_POSES[i + PRINT_POSES.length - arrival.previews.length]!;
@@ -432,7 +522,7 @@ function ArrivalCard({ arrival, floating = false, onOpen, onClose }: { arrival: 
           {t("openAlbum")}
         </Button>
       </div>
-      <button type="button" aria-label={tc("close")} onClick={onClose} className="grid size-8 shrink-0 place-items-center self-start rounded-lg hover:bg-foreground/5">
+      <button type="button" aria-label={tc("close")} onClick={onClose} className="grid size-11 shrink-0 place-items-center self-start rounded-lg hover:bg-foreground/5">
         <X className="size-4" />
       </button>
     </motion.div>
@@ -441,7 +531,7 @@ function ArrivalCard({ arrival, floating = false, onOpen, onClose }: { arrival: 
 
 function Tag({ children, warn }: { children: React.ReactNode; warn?: boolean }) {
   return (
-    <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", warn ? "bg-accent text-accent-foreground" : "bg-olive-soft text-olive")}>
+    <span className={cn("max-w-full break-words rounded-full px-2 py-0.5 text-xs font-semibold", warn ? "bg-accent text-accent-foreground" : "bg-olive-soft text-olive")}>
       {children}
     </span>
   );

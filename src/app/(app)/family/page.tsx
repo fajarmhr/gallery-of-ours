@@ -25,8 +25,8 @@ export default async function FamilyPage() {
         <InviteButton days={INVITE_DAYS} />
       </PageHeader>
       <div className="grid gap-5">
-        <section className="rounded-3xl border bg-card p-5">
-          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold">
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="mb-4 flex items-center gap-2 font-display text-2xl font-medium">
             {t("waiting")}
             {pending.length ? (
               <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{pending.length}</span>
@@ -35,13 +35,13 @@ export default async function FamilyPage() {
           <RequestsList requests={pending.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() }))} />
         </section>
 
-        <section className="rounded-3xl border bg-card p-5">
-          <h2 className="mb-4 font-display text-lg font-bold">{ti("section")}</h2>
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="mb-4 font-display text-2xl font-medium">{ti("section")}</h2>
           <InvitesList invites={invites.map(({ token, ...invite }) => ({ ...invite, url: inviteUrl(env.appUrl, token) }))} />
         </section>
 
-        <section className="rounded-3xl border bg-card p-5">
-          <h2 className="mb-4 font-display text-lg font-bold">{t("members")}</h2>
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="mb-4 font-display text-2xl font-medium">{t("members")}</h2>
           <MembersList members={members} albums={albums} currentUserId={user.id} canChangeRoles={isSuperadmin(user)} />
           <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
             <Lock className="mt-0.5 size-3.5 shrink-0" />

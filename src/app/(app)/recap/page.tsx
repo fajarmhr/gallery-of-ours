@@ -24,7 +24,7 @@ export default async function RecapIndexPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {years.map((year) => (
-            <Link key={year.year} href={`/recap/${year.year}`} className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-3xl bg-[#2e241d] p-4 text-white">
+            <Link key={year.year} href={`/recap/${year.year}`} className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-xl bg-[#2e241d] p-4 text-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={mediaUrl(year.coverId, "medium")} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80 transition-transform duration-700 group-hover:scale-105" />
               <span className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/85 via-transparent to-transparent" />

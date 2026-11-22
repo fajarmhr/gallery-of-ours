@@ -1,5 +1,6 @@
 import exifr from "exifr";
 import { rgbaToThumbHash } from "thumbhash";
+import { mediaFileInfo } from "@/lib/media-file";
 
 export type PreparedFile = {
   name: string;
@@ -18,14 +19,16 @@ export type PreparedFile = {
   previewUrl: string | null;
 };
 
-export const isHeicFile = (file: File) => /\.(heic|heif)$/i.test(file.name) || /image\/hei[cf]/i.test(file.type);
-export const isSupportedFile = (file: File) =>
-  file.type.startsWith("image/") || file.type.startsWith("video/") || isHeicFile(file);
+export const isHeicFile = (file: File) => mediaFileInfo(file.name, file.type).heic;
+export const isSupportedFile = (file: File) => mediaFileInfo(file.name, file.type).type !== null;
 
 const finite = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
 
 /** The file's modified time, when the browser reports a real one. */
-const modifiedAt = (file: File) => (file.lastModified > 0 ? new Date(file.lastModified).toISOString() : null);
+const modifiedAt = (file: File) => {
+  const date = new Date(file.lastModified);
+  return file.lastModified > 0 && Number.isFinite(date.getTime()) ? date.toISOString() : null;
+};
 
 const toBase64 = (bytes: Uint8Array) => {
   let binary = "";
@@ -33,42 +36,74 @@ const toBase64 = (bytes: Uint8Array) => {
   return btoa(binary);
 };
 
-async function imageSize(blob: Blob) {
+/** Native decoding handles HEIC on current iPhones without loading a large WASM decoder. */
+async function loadImage(blob: Blob) {
   const url = URL.createObjectURL(blob);
-  try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    return { width: img.naturalWidth, height: img.naturalHeight };
-  } finally {
+  const image = new Image();
+  const dispose = () => {
+    image.onload = image.onerror = null;
+    image.removeAttribute("src");
     URL.revokeObjectURL(url);
+  };
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("image_decode_timeout")), 10_000);
+      image.onload = () => {
+        clearTimeout(timer);
+        if (image.naturalWidth && image.naturalHeight) resolve();
+        else reject(new Error("image_decode_failed"));
+      };
+      image.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error("image_decode_failed"));
+      };
+      image.src = url;
+    });
+    return { image, dispose };
+  } catch (error) {
+    dispose();
+    throw error;
   }
 }
 
-async function thumbhashOf(source: Blob | CanvasImageSource, width: number, height: number) {
+function thumbhashOf(source: CanvasImageSource, width: number, height: number) {
+  const canvas = document.createElement("canvas");
   try {
     const scale = 100 / Math.max(width, height);
     const w = Math.max(1, Math.round(width * scale));
     const h = Math.max(1, Math.round(height * scale));
-    const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
     const context = canvas.getContext("2d");
     if (!context) return null;
-    if (source instanceof Blob) {
-      const bitmap = await createImageBitmap(source, { resizeWidth: w, resizeHeight: h, resizeQuality: "medium" });
-      context.drawImage(bitmap, 0, 0, w, h);
-      bitmap.close();
-    } else {
-      context.drawImage(source, 0, 0, w, h);
-    }
+    context.drawImage(source, 0, 0, w, h);
     return toBase64(rgbaToThumbHash(w, h, context.getImageData(0, 0, w, h).data));
   } catch {
     return null;
+  } finally {
+    canvas.width = canvas.height = 1;
   }
 }
 
-function readVideo(file: File): Promise<{ width: number | null; height: number | null; duration: number | null; poster: Blob | null }> {
+/** Canvas surfaces stay bounded even for 48 MP photos and 4K/8K video. Originals are untouched. */
+async function jpegOf(source: CanvasImageSource, width: number, height: number, maxEdge: number, quality = 0.88) {
+  const canvas = document.createElement("canvas");
+  try {
+    const scale = Math.min(1, maxEdge / Math.max(width, height));
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  } catch {
+    return null;
+  } finally {
+    canvas.width = canvas.height = 1;
+  }
+}
+
+function readVideo(file: Blob): Promise<{ width: number | null; height: number | null; duration: number | null; poster: Blob | null }> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
@@ -83,45 +118,66 @@ function readVideo(file: File): Promise<{ width: number | null; height: number |
       settled = true;
       clearTimeout(timer);
       const result = { ...meta(), poster };
+      video.onloadedmetadata = video.onloadeddata = video.onseeked = video.onerror = null;
       URL.revokeObjectURL(url);
       video.removeAttribute("src");
       video.load();
       resolve(result);
     };
-    const timer = setTimeout(() => finish(null), 15_000);
+    const timer = setTimeout(() => finish(null), 10_000);
 
-    video.preload = "metadata";
+    video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
     video.onloadedmetadata = () => {
-      video.currentTime = Math.min(0.5, (Number.isFinite(video.duration) ? video.duration : 1) / 3);
+      try {
+        video.currentTime = Math.min(0.5, (Number.isFinite(video.duration) ? video.duration : 1) / 3);
+      } catch {
+        finish(null);
+      }
     };
-    video.onseeked = () => {
-      const scale = Math.min(1, 1920 / Math.max(video.videoWidth || 1, video.videoHeight || 1));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(video.videoWidth * scale);
-      canvas.height = Math.round(video.videoHeight * scale);
-      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => finish(blob), "image/jpeg", 0.85);
+    let capturing = false;
+    const capture = () => {
+      if (settled || capturing || video.seeking || !video.videoWidth || !video.videoHeight || video.readyState < 2) return;
+      capturing = true;
+      void jpegOf(video, video.videoWidth, video.videoHeight, 1280, 0.85).then(finish);
     };
+    video.onloadeddata = capture;
+    video.onseeked = capture;
     video.onerror = () => finish(null);
     video.src = url;
+    video.load();
   });
 }
 
 /** Reads date, GPS and size, converts HEIC for browsers and builds a tiny blurred preview. */
-export async function prepareFile(file: File, onStage?: (stage: "reading" | "converting") => void): Promise<PreparedFile> {
+export async function prepareFile(
+  file: File,
+  onStage?: (stage: "reading" | "converting") => void,
+  options: { portableDisplay?: boolean } = {},
+): Promise<PreparedFile> {
   onStage?.("reading");
-  const heic = isHeicFile(file);
+  const info = mediaFileInfo(file.name, file.type);
+  if (!info.type) throw new Error("unsupported_file");
+  const heic = info.heic;
+  // Files/iCloud sometimes supplies an empty MIME. Give decoders the same type we sign for storage.
+  const typedFile = file.type === info.mime ? file : file.slice(0, file.size, info.mime);
   const base = {
     name: file.name,
-    mime: file.type || (heic ? "image/heic" : "application/octet-stream"),
+    mime: info.mime,
     size: file.size,
   };
 
-  if (file.type.startsWith("video/")) {
-    const video = await readVideo(file);
-    const thumbhash = video.poster && video.width && video.height ? await thumbhashOf(video.poster, video.width, video.height) : null;
+  if (info.type === "video") {
+    const video = await readVideo(typedFile);
+    let thumbhash: string | null = null;
+    if (video.poster && video.width && video.height) {
+      const decoded = await loadImage(video.poster).catch(() => null);
+      if (decoded) {
+        thumbhash = thumbhashOf(decoded.image, decoded.image.naturalWidth, decoded.image.naturalHeight);
+        decoded.dispose();
+      }
+    }
     return {
       ...base,
       type: "video",
@@ -157,27 +213,39 @@ export async function prepareFile(file: File, onStage?: (stage: "reading" | "con
   }
 
   let display: Blob | null = null;
-  if (heic) {
+  let decoded = await loadImage(typedFile).catch(() => null);
+  // Only older/non-Apple browsers need the software HEIC decoder.
+  if (heic && !decoded && options.portableDisplay !== false) {
     onStage?.("converting");
     try {
       const { heicTo } = await import("heic-to");
-      display = await heicTo({ blob: file, type: "image/jpeg", quality: 0.9 });
+      const converted = await heicTo({ blob: file, type: "image/jpeg", quality: 0.9 });
+      decoded = await loadImage(converted);
     } catch {
-      display = null;
+      throw new Error("heic_conversion_failed");
     }
   }
 
-  const source = display ?? file;
   let width: number | null = null;
   let height: number | null = null;
   let thumbhash: string | null = null;
-  try {
-    const size = await imageSize(source);
-    width = size.width || null;
-    height = size.height || null;
-    if (width && height) thumbhash = await thumbhashOf(source, width, height);
-  } catch {
-    // Unreadable in this browser; the server still processes the original.
+  let previewUrl: string | null = null;
+  if (decoded) {
+    try {
+      width = decoded.image.naturalWidth;
+      height = decoded.image.naturalHeight;
+      thumbhash = thumbhashOf(decoded.image, width, height);
+      if (heic && options.portableDisplay !== false) {
+        onStage?.("converting");
+        display = await jpegOf(decoded.image, width, height, 2400);
+        // Most server builds cannot decode HEIC, so require a portable display copy.
+        if (!display) throw new Error("heic_conversion_failed");
+      }
+      const preview = await jpegOf(decoded.image, width, height, 480, 0.78);
+      if (preview) previewUrl = URL.createObjectURL(preview);
+    } finally {
+      decoded.dispose();
+    }
   }
 
   return {
@@ -192,7 +260,7 @@ export async function prepareFile(file: File, onStage?: (stage: "reading" | "con
     thumbhash,
     display,
     poster: null,
-    previewUrl: width ? URL.createObjectURL(source) : null,
+    previewUrl,
   };
 }
 
@@ -206,6 +274,7 @@ export function putWithProgress(target: { url: string; headers: Record<string, s
     };
     xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("upload_missing")));
     xhr.onerror = () => reject(new Error("network"));
+    xhr.onabort = () => reject(new Error("network"));
     xhr.send(body);
   });
 }
@@ -233,6 +302,7 @@ export function postWithProgress(target: { url: string; fields: Record<string, s
       reject(new Error(/file size too large/i.test(message) ? "cloudinary_too_large" : "cloudinary_upload_failed"));
     };
     xhr.onerror = () => reject(new Error("network"));
+    xhr.onabort = () => reject(new Error("network"));
     xhr.send(form);
   });
 }

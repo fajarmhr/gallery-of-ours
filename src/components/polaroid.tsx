@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 const SPRING = "transition-transform duration-500 ease-[cubic-bezier(.2,.8,.2,1)]";
 
 const PILE_POSES = [
-  "-rotate-[7deg] group-hover:-translate-x-[30%] group-hover:-rotate-[13deg] group-focus-visible:-translate-x-[30%] group-focus-visible:-rotate-[13deg]",
-  "rotate-[5deg] group-hover:translate-x-[30%] group-hover:rotate-[11deg] group-focus-visible:translate-x-[30%] group-focus-visible:rotate-[11deg]",
-  "-rotate-[1.5deg] group-hover:-translate-y-[7%] group-hover:rotate-0 group-focus-visible:-translate-y-[7%] group-focus-visible:rotate-0",
+  "-rotate-[5deg] group-hover:-translate-x-[4%] group-hover:-rotate-[7deg] motion-reduce:transform-none",
+  "rotate-[4deg] group-hover:translate-x-[4%] group-hover:rotate-[6deg] motion-reduce:transform-none",
+  "-rotate-[1deg] group-hover:-translate-y-[2%] group-hover:rotate-0 motion-reduce:transform-none",
 ];
 
 /**

@@ -27,7 +27,7 @@ export default async function MorePage() {
         {groups.map((group, index) => (
           <section key={index}>
             {group.label ? <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{group.label}</p> : null}
-            <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
+            <ul className="divide-y overflow-hidden rounded-xl border bg-card">
               {group.items.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-foreground/5">

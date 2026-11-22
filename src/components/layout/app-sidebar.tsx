@@ -30,11 +30,11 @@ export function AppSidebar({ user, pendingCount, since }: Props) {
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground",
-          active && "bg-card text-foreground shadow-sm ring-1 ring-border [&_svg]:text-primary",
+          "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-sidebar-accent/60 hover:text-foreground",
+          active && "bg-sidebar-accent text-foreground [&_svg]:text-primary",
         )}
       >
-        <item.icon className="size-[18px]" />
+        <item.icon className="size-[18px]" strokeWidth={active ? 2 : 1.7} />
         {t(item.key)}
         {item.key === "family" && pendingCount > 0 ? (
           <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold leading-none text-primary-foreground">
@@ -46,24 +46,24 @@ export function AppSidebar({ user, pendingCount, since }: Props) {
   };
 
   const label = (text: string) => (
-    <p className="mb-1 mt-5 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{text}</p>
+    <p className="mb-2 mt-7 px-3 text-xs font-medium tracking-wide text-muted-foreground">{text}</p>
   );
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col overflow-y-auto border-r bg-sidebar px-3 py-5 lg:flex">
-      <Link href="/home" className="mb-4 px-3">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-y-auto border-r bg-sidebar px-4 py-8 lg:flex">
+      <Link href="/home" className="mb-10 px-2">
         <Brand since={since} />
       </Link>
-      <nav className="flex flex-col gap-0.5">{mainNav.map(link)}</nav>
+      <nav aria-label={t("home")} className="flex flex-col gap-1">{mainNav.map(link)}</nav>
       {label(t("memories"))}
-      <nav className="flex flex-col gap-0.5">{memoriesNav.map(link)}</nav>
+      <nav aria-label={t("memories")} className="flex flex-col gap-1">{memoriesNav.map(link)}</nav>
       {user.role !== "member" ? (
         <>
           {label(t("admin"))}
-          <nav className="flex flex-col gap-0.5">{adminNav.map(link)}</nav>
+          <nav aria-label={t("admin")} className="flex flex-col gap-1">{adminNav.map(link)}</nav>
         </>
       ) : null}
-      <div className="mt-auto flex items-center gap-2 border-t pt-3">
+      <div className="mt-auto flex items-center gap-2 border-t pt-5">
         <UserAvatar name={user.name} image={user.image} />
         <div className="min-w-0 flex-1 leading-tight">
           <p className="truncate text-sm font-semibold">{user.name}</p>
@@ -72,7 +72,7 @@ export function AppSidebar({ user, pendingCount, since }: Props) {
         <Link
           href="/settings"
           aria-label={t("settings")}
-          className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+          className="grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
         >
           <Settings className="size-[18px]" />
         </Link>
@@ -84,7 +84,7 @@ export function AppSidebar({ user, pendingCount, since }: Props) {
             router.push("/");
             router.refresh();
           }}
-          className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+          className="grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
         >
           <LogOut className="size-[18px]" />
         </button>

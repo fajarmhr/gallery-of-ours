@@ -6,10 +6,10 @@
 
 @theme inline {
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
-  --font-hand: var(--font-hand), "Segoe Print", cursive;
-  --font-stamp: var(--font-stamp), ui-monospace, monospace;
-  --font-heading: var(--font-display), var(--font-body), sans-serif;
+  --font-display: var(--font-editorial), Georgia, serif;
+  --font-hand: var(--font-handwriting), "Segoe Print", cursive;
+  --font-stamp: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-heading: var(--font-editorial), Georgia, serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -65,96 +65,96 @@
   }
   --animate-story-fill: story-fill 5s linear forwards;
   @keyframes story-fill {
-    from { width: 0%; }
-    to { width: 100%; }
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
   }
 }
 
-/* Earthy light theme: sand, espresso, terracotta, olive */
+/* Warm paper, soft ink, and a restrained clay accent. */
 :root {
-  --background: #efe7da;
-  --foreground: #2e241d;
-  --card: #fbf7f0;
-  --card-foreground: #2e241d;
-  --popover: #fbf7f0;
-  --popover-foreground: #2e241d;
-  --primary: #b4552f;
-  --primary-foreground: #ffffff;
-  --secondary: #e7dccb;
-  --secondary-foreground: #2e241d;
-  --muted: #e9dfd0;
-  --muted-foreground: #7c6a5b;
-  --accent: #f1dccb;
-  --accent-foreground: #9a4424;
+  --background: #f8f6f1;
+  --foreground: #352e29;
+  --card: #fdfcf9;
+  --card-foreground: #352e29;
+  --popover: #fdfcf9;
+  --popover-foreground: #352e29;
+  --primary: #985740;
+  --primary-foreground: #fffaf5;
+  --secondary: #eee9e0;
+  --secondary-foreground: #463c33;
+  --muted: #f0ece5;
+  --muted-foreground: #746a60;
+  --accent: #f0e4da;
+  --accent-foreground: #8b4e38;
   --destructive: #b3261e;
-  --border: #e2d6c4;
-  --input: #dccfbb;
-  --ring: #b4552f;
-  --chart-1: #b4552f;
+  --border: #e5dfd5;
+  --input: #d8cfc2;
+  --ring: #985740;
+  --chart-1: #985740;
   --chart-2: #66773a;
   --chart-3: #c99a5b;
   --chart-4: #7c6a5b;
   --chart-5: #3e5a5c;
-  --radius: 0.875rem;
-  --sidebar: #f6f0e6;
-  --sidebar-foreground: #2e241d;
-  --sidebar-primary: #b4552f;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #fbf7f0;
-  --sidebar-accent-foreground: #2e241d;
-  --sidebar-border: #e2d6c4;
-  --sidebar-ring: #b4552f;
+  --radius: 0.625rem;
+  --sidebar: #f3efe7;
+  --sidebar-foreground: #352e29;
+  --sidebar-primary: #985740;
+  --sidebar-primary-foreground: #fffaf5;
+  --sidebar-accent: #eae3d8;
+  --sidebar-accent-foreground: #352e29;
+  --sidebar-border: #e5dfd5;
+  --sidebar-ring: #985740;
 
-  --olive: #66773a;
-  --olive-soft: #e3e6cf;
+  --olive: #606b4b;
+  --olive-soft: #e8ecdf;
   --olive-foreground: #ffffff;
-  --note: #9a4424;
-  --print: #fffbf4;
-  --print-shadow: rgba(70, 45, 25, 0.22);
-  --blank: #e6dccd;
+  --note: #985740;
+  --print: #fffdf8;
+  --print-shadow: rgba(70, 45, 25, 0.045);
+  --blank: #e9e2d7;
 }
 
 /* Warm coffee dark theme */
 .dark {
-  --background: #1a1512;
+  --background: #211e1b;
   --foreground: #f2e9df;
-  --card: #2a221d;
+  --card: #2b2723;
   --card-foreground: #f2e9df;
-  --popover: #2a221d;
+  --popover: #2b2723;
   --popover-foreground: #f2e9df;
-  --primary: #e08a5c;
-  --primary-foreground: #1e120c;
-  --secondary: #30271f;
+  --primary: #dfa68b;
+  --primary-foreground: #2d1c15;
+  --secondary: #35302a;
   --secondary-foreground: #f2e9df;
-  --muted: #2a221d;
-  --muted-foreground: #b09f8f;
-  --accent: #3d261b;
-  --accent-foreground: #efa27a;
+  --muted: #302b26;
+  --muted-foreground: #baaea0;
+  --accent: #423229;
+  --accent-foreground: #edb59b;
   --destructive: #f2897d;
-  --border: #3a2f28;
-  --input: #43382d;
-  --ring: #e08a5c;
+  --border: #443c33;
+  --input: #574b40;
+  --ring: #dfa68b;
   --chart-1: #e08a5c;
   --chart-2: #a9b872;
   --chart-3: #d8b07a;
   --chart-4: #b09f8f;
   --chart-5: #7fa3a4;
-  --sidebar: #211a16;
+  --sidebar: #26221e;
   --sidebar-foreground: #f2e9df;
-  --sidebar-primary: #e08a5c;
+  --sidebar-primary: #dfa68b;
   --sidebar-primary-foreground: #1e120c;
-  --sidebar-accent: #2a221d;
+  --sidebar-accent: #35302a;
   --sidebar-accent-foreground: #f2e9df;
-  --sidebar-border: #3a2f28;
-  --sidebar-ring: #e08a5c;
+  --sidebar-border: #443c33;
+  --sidebar-ring: #dfa68b;
 
   --olive: #a9b872;
   --olive-soft: #2e3120;
   --olive-foreground: #1a1c10;
   --note: #f0b48a;
-  --print: #ede3d6;
-  --print-shadow: rgba(0, 0, 0, 0.5);
-  --blank: #d9cdbd;
+  --print: #e9e0d3;
+  --print-shadow: rgba(0, 0, 0, 0.045);
+  --blank: #d8cebf;
 }
 
 @layer base {
@@ -167,6 +167,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  a, button, input, textarea, select {
+    touch-action: manipulation;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 4px;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -180,33 +192,54 @@
 @layer components {
   .polaroid {
     background: var(--print);
-    box-shadow: 0 1px 1px var(--print-shadow), 0 10px 22px var(--print-shadow);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px var(--print-shadow);
   }
   .glass {
-    background: rgb(255 255 255 / 0.16);
-    border: 1px solid rgb(255 255 255 / 0.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    backdrop-filter: blur(18px) saturate(1.4);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 10px 30px rgb(0 0 0 / 0.16);
+    background: rgb(35 28 23 / 0.68);
+    border: 1px solid rgb(255 255 255 / 0.2);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
   }
   .date-stamp {
     font-family: var(--font-stamp);
     letter-spacing: 0.08em;
-    color: #ffae73;
-    text-shadow: 0 0 8px rgb(255 120 40 / 0.55);
+    color: #f0c8a6;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
   }
   .wax-seal {
     border-radius: 46% 54% 52% 48% / 53% 47% 53% 47%;
-    background: radial-gradient(circle at 32% 28%, #d8704f 0%, #a8412a 48%, #7c2c18 100%);
+    background: #985740;
     color: #f8dcc8;
-    box-shadow:
-      inset 0 2px 2px rgb(255 255 255 / 0.28),
-      inset 0 -4px 8px rgb(0 0 0 / 0.35),
-      0 0 0 3px rgb(168 65 42 / 0.45),
-      0 8px 18px rgb(60 20 10 / 0.35);
+    border: 3px double rgb(248 220 200 / 0.45);
   }
   .pb-safe {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  .story-progress {
+    transform-origin: left;
+  }
+  .skip-link {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 60;
+    transform: translateY(-200%);
+    border-radius: 6px;
+    background: var(--foreground);
+    color: var(--background);
+    padding: 0.75rem 1rem;
+  }
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+  .page-enter {
+    animation: page-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  @keyframes page-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 }
 
@@ -217,5 +250,20 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* The progress bar also drives the story timer; retain the reading time. */
+  .animate-story-fill {
+    animation-duration: 5s !important;
+  }
+}
+
+@media (pointer: coarse) {
+  [data-slot="button"], [data-slot="dialog-close"], [data-slot="select-trigger"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  input, textarea, select {
+    font-size: 16px;
   }
 }

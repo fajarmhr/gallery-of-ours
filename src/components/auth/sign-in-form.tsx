@@ -23,7 +23,7 @@ export function authErrorMessage(t: Translate, code: string | undefined) {
 
 export const safeNext = (next: string | undefined) => (next && next.startsWith("/") && !next.startsWith("//") ? next : "/home");
 
-export const fieldClass = "h-11 rounded-xl bg-background text-base";
+export const fieldClass = "h-12 rounded-lg bg-background/70 px-3.5 text-base shadow-none";
 
 export function SignInForm({ next, notice }: { next?: string; notice?: string }) {
   const t = useTranslations("auth");
@@ -38,29 +38,34 @@ export function SignInForm({ next, notice }: { next?: string; notice?: string })
     setPending(true);
     setError(null);
     const id = identifier.trim();
-    const result = id.includes("@")
-      ? await authClient.signIn.email({ email: id, password })
-      : await authClient.signIn.username({ username: id, password });
-    if (result.error) {
+    try {
+      const result = id.includes("@")
+        ? await authClient.signIn.email({ email: id, password })
+        : await authClient.signIn.username({ username: id, password });
+      if (result.error) {
+        setPending(false);
+        setError(authErrorMessage(t, result.error.code));
+        return;
+      }
+      router.push(safeNext(next));
+      router.refresh();
+    } catch {
       setPending(false);
-      setError(authErrorMessage(t, result.error.code));
-      return;
+      setError(t("genericError"));
     }
-    router.push(safeNext(next));
-    router.refresh();
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      {notice ? <p className="rounded-xl bg-olive-soft px-3 py-2 text-sm font-medium text-olive">{notice}</p> : null}
+    <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={pending}>
+      {notice ? <p role="status" className="rounded-lg bg-olive-soft px-3 py-2.5 text-sm font-medium text-olive">{notice}</p> : null}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="identifier">{t("identifier")}</Label>
-        <Input id="identifier" autoComplete="username" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={fieldClass} />
+        <Input id="identifier" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={fieldClass} />
       </div>
       <div className="flex flex-col gap-1.5">
         <div className="flex items-baseline justify-between gap-2">
           <Label htmlFor="password">{t("password")}</Label>
-          <Link href="/forgot-password" className="text-sm font-semibold text-accent-foreground hover:underline">
+          <Link href="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-foreground hover:underline">
             {t("forgotPassword")}
           </Link>
         </div>
@@ -71,7 +76,7 @@ export function SignInForm({ next, notice }: { next?: string; notice?: string })
           {error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending} className="mt-1 h-11 rounded-xl text-base">
+      <Button type="submit" disabled={pending} className="mt-1 h-12 rounded-lg text-base">
         {pending ? t("signingIn") : t("signIn")}
       </Button>
       <p className="text-center text-sm text-muted-foreground">

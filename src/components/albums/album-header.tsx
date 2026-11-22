@@ -90,11 +90,11 @@ export function AlbumHeader({ album, coverId, meta, placeName, canEdit, isAdmin,
   }
 
   return (
-    <header className="relative mb-8 overflow-hidden rounded-3xl bg-[#2e241d] text-white">
+    <header className="relative mb-8 overflow-hidden rounded-xl bg-[#2e241d] text-white">
       <div className="absolute inset-0">
         {coverId ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={mediaUrl(coverId, "large")} alt="" className="h-full w-full animate-kenburns object-cover" />
+          <img src={mediaUrl(coverId, "large")} alt="" className="h-full w-full object-cover" />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-r from-[#1c120e]/80 via-[#1c120e]/35 to-[#1c120e]/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/70 via-transparent to-transparent" />
@@ -157,9 +157,9 @@ export function AlbumHeader({ album, coverId, meta, placeName, canEdit, isAdmin,
           ) : null}
         </div>
 
-        <div className="max-w-2xl">
-          {album.note ? <p className="mb-1 inline-block origin-left -rotate-2 font-hand text-2xl text-[#ffd3a8] sm:text-3xl">{album.note}</p> : null}
-          <h1 className="text-balance font-display text-4xl font-extrabold leading-[0.98] tracking-tight sm:text-5xl">{album.title}</h1>
+        <div className="min-w-0 max-w-2xl [overflow-wrap:anywhere]">
+          {album.note ? <p className="mb-1 inline-block text-sm font-medium tracking-wide text-[#f0d5bc] sm:text-base">{album.note}</p> : null}
+          <h1 className="text-balance font-display text-4xl font-normal leading-[0.98] tracking-tight sm:text-6xl">{album.title}</h1>
           <p className="mt-2 text-sm text-white/85 sm:text-base">{meta}</p>
           {placeName ? (
             <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-white/85">

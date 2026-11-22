@@ -62,7 +62,7 @@ export function GlobeView({
   }
 
   return (
-    <div className="relative h-[65dvh] min-h-[380px] overflow-hidden rounded-3xl border bg-[#0f0b09]">
+    <div className="relative h-[65dvh] min-h-[380px] overflow-hidden rounded-xl border bg-[#0f0b09]">
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const segment = "inline-flex flex-wrap gap-1 rounded-xl border bg-card p-1";
 const option = (active: boolean) =>
   cn(
-    "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60",
+    "inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60",
     active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
   );
 

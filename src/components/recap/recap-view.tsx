@@ -13,9 +13,9 @@ export function RecapStats({ stats }: { stats: { label: string; value: number }[
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: index * 0.08, duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
-          className="rounded-3xl border bg-card p-5"
+          className="rounded-xl border bg-card p-5"
         >
-          <CountUp value={stat.value} className="block font-display text-4xl font-extrabold tabular-nums tracking-tight sm:text-5xl" />
+          <CountUp value={stat.value} className="block font-display text-3xl font-normal tabular-nums tracking-tight lg:text-4xl xl:text-5xl" />
           <span className="text-sm font-semibold text-muted-foreground">{stat.label}</span>
         </motion.div>
       ))}
@@ -51,10 +51,10 @@ export function RecapFacts({ facts }: { facts: { label: string; value: string }[
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.15 + index * 0.08, duration: 0.45 }}
-          className="rounded-3xl bg-accent p-5 text-accent-foreground"
+          className="rounded-xl bg-accent p-5 text-accent-foreground"
         >
           <p className="text-xs font-bold uppercase tracking-[0.12em]">{fact.label}</p>
-          <p className="mt-1 font-display text-2xl font-extrabold leading-tight text-foreground">{fact.value}</p>
+          <p className="mt-1 font-display text-3xl font-medium leading-tight text-foreground [overflow-wrap:anywhere]">{fact.value}</p>
         </motion.div>
       ))}
     </div>

@@ -45,7 +45,7 @@ export default async function StoragePage() {
     <div className="max-w-3xl">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <div className="grid gap-5">
-        <section className="rounded-3xl border bg-card p-5">
+        <section className="rounded-xl border bg-card p-5">
           <CardHead
             icon={<HardDrive className="size-5" />}
             title={onR2 ? t("r2Title") : t("localTitle")}
@@ -74,7 +74,7 @@ export default async function StoragePage() {
           const result = clouds[index];
           const usage = result?.ok ? result.value : null;
           return (
-            <section key={account.cloudName} className="rounded-3xl border bg-card p-5">
+            <section key={account.cloudName} className="rounded-xl border bg-card p-5">
               <CardHead
                 icon={<Cloud className="size-5" />}
                 title={t("cloudinaryTitle", { number: index + 1 })}
@@ -122,13 +122,13 @@ export default async function StoragePage() {
 function CardHead({ icon, title, detail, size, kept }: { icon: React.ReactNode; title: string; detail: string; size: string | null; kept: string }) {
   return (
     <>
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground">{icon}</span>
         <div className="min-w-0 flex-1 leading-tight">
-          <h2 className="font-display text-lg font-bold">{title}</h2>
+          <h2 className="font-display text-2xl font-medium [overflow-wrap:anywhere]">{title}</h2>
           {detail ? <p className="truncate text-xs text-muted-foreground">{detail}</p> : null}
         </div>
-        {size ? <p className="shrink-0 font-display text-2xl font-bold tabular-nums">{size}</p> : null}
+        {size ? <p className="w-full shrink-0 pl-[52px] font-display text-3xl font-medium tabular-nums sm:w-auto sm:pl-0">{size}</p> : null}
       </div>
       <p className="mt-2 font-hand text-xl leading-none text-note">{kept}</p>
     </>

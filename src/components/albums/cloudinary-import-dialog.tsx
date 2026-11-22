@@ -136,7 +136,7 @@ export function CloudinaryImportDialog({
                 goTo("");
               }}
             >
-              <SelectTrigger className="h-9 w-auto rounded-lg" aria-label={t("account")}>
+              <SelectTrigger className="h-9 w-full min-w-0 max-w-full rounded-lg sm:w-auto [&_[data-slot=select-value]]:min-w-0" aria-label={t("account")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -148,7 +148,7 @@ export function CloudinaryImportDialog({
               </SelectContent>
             </Select>
           ) : null}
-          <nav aria-label={t("folders")} className="flex min-w-0 flex-wrap items-center gap-0.5 text-sm">
+          <nav aria-label={t("folders")} className="flex w-full min-w-0 flex-wrap items-center gap-0.5 text-sm">
             <button
               type="button"
               disabled={busy}
@@ -161,14 +161,14 @@ export function CloudinaryImportDialog({
             {crumbs.map((name, index) => {
               const target = crumbs.slice(0, index + 1).join("/");
               return (
-                <span key={target} className="flex items-center gap-0.5">
-                  <ChevronRight className="size-3.5 text-muted-foreground" />
+                <span key={target} className="flex min-w-0 max-w-full items-center gap-0.5">
+                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => goTo(target)}
                     aria-current={target === path ? "page" : undefined}
-                    className="rounded-md px-2 py-1 font-semibold hover:bg-foreground/5 aria-[current=page]:text-primary"
+                    className="min-w-0 truncate rounded-md px-2 py-1 font-semibold hover:bg-foreground/5 aria-[current=page]:text-primary"
                   >
                     {name}
                   </button>
@@ -197,7 +197,7 @@ export function CloudinaryImportDialog({
                       type="button"
                       disabled={busy}
                       onClick={() => goTo(folder.path)}
-                      className="flex items-center gap-2 rounded-xl border bg-card px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-foreground/5"
+                      className="flex min-w-0 items-center gap-2 rounded-xl border bg-card px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-foreground/5"
                     >
                       <Folder className="size-4 shrink-0 text-primary" />
                       <span className="truncate">{folder.name}</span>

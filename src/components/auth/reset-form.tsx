@@ -28,17 +28,22 @@ export function ResetForm({ token }: { token: string | null }) {
     }
     setPending(true);
     setError(null);
-    const result = await authClient.resetPassword({ newPassword: password, token });
-    setPending(false);
-    if (result.error) {
-      setError(authErrorMessage(t, result.error.code));
-      return;
+    try {
+      const result = await authClient.resetPassword({ newPassword: password, token });
+      if (result.error) {
+        setError(authErrorMessage(t, result.error.code));
+        return;
+      }
+      router.push("/sign-in?reset=1");
+    } catch {
+      setError(t("genericError"));
+    } finally {
+      setPending(false);
     }
-    router.push("/sign-in?reset=1");
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={pending}>
       <AuthHeadingClient title={t("resetTitle")} lead={t("resetLead")} />
       <Field id="password" label={t("newPassword")}>
         <Input id="password" type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={fieldClass} disabled={!token} />
@@ -51,7 +56,7 @@ export function ResetForm({ token }: { token: string | null }) {
           {error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending || !token} className="h-11 rounded-xl text-base">
+      <Button type="submit" disabled={pending || !token} className="h-12 rounded-lg text-base">
         {pending ? t("sending") : t("setPassword")}
       </Button>
       <Link href={token ? "/sign-in" : "/forgot-password"} className="text-center text-sm font-semibold text-accent-foreground hover:underline">

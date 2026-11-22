@@ -134,10 +134,10 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
       <div>
         <AuthHeadingClient icon={<Unlink className="size-7" />} title={ti("invalidTitle")} lead={ti("invalidText")} />
         <div className="flex flex-col gap-2">
-          <Button asChild className="h-11 w-full rounded-xl">
+          <Button asChild className="h-12 w-full rounded-lg">
             <Link href="/sign-up">{t("requestAccess")}</Link>
           </Button>
-          <Button asChild variant="outline" className="h-11 w-full rounded-xl">
+          <Button asChild variant="outline" className="h-12 w-full rounded-lg">
             <Link href="/sign-in">{t("signIn")}</Link>
           </Button>
         </div>
@@ -149,7 +149,7 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
     return (
       <div>
         <AuthHeadingClient icon={<MailCheck className="size-7" />} title={t("checkEmailTitle")} lead={t("checkEmailText", { email: sentTo })} />
-        <Button asChild variant="outline" className="h-11 w-full rounded-xl">
+        <Button asChild variant="outline" className="h-12 w-full rounded-lg">
           <Link href="/">{t("backToStart")}</Link>
         </Button>
       </div>
@@ -158,7 +158,7 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
 
   if (invited && codeFor) {
     return (
-      <form onSubmit={onVerify} className="flex flex-col gap-4">
+      <form onSubmit={onVerify} className="flex flex-col gap-5" aria-busy={pending || busy !== null}>
         <AuthHeadingClient title={ti("codeTitle")} lead={ti("codeLead", { email: codeFor })} />
         <p className="-mt-2 font-hand text-2xl leading-none text-note">{ti("almostHome")}</p>
         <Field id="code" label={ti("code")} hint={ti("codeHint")}>
@@ -169,18 +169,19 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
             autoComplete="one-time-code"
             pattern="[0-9]{6}"
             maxLength={6}
+            aria-describedby="code-hint"
             value={code}
             onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
             className={cn(fieldClass, "text-center font-mono text-2xl tracking-[0.4em]")}
           />
         </Field>
-        {notice ? <p className="rounded-xl bg-olive-soft px-3 py-2 text-sm font-medium text-olive">{notice}</p> : null}
+        {notice ? <p role="status" className="rounded-lg bg-olive-soft px-3 py-2.5 text-sm font-medium text-olive">{notice}</p> : null}
         {error ? (
           <p role="alert" className="text-sm font-medium text-destructive">
             {error}
           </p>
         ) : null}
-        <Button type="submit" disabled={pending || busy !== null || code.length !== 6} className="mt-1 h-11 rounded-xl text-base">
+        <Button type="submit" disabled={pending || busy !== null || code.length !== 6} className="mt-1 h-12 rounded-lg text-base">
           {pending ? ti("verifying") : ti("verify")}
         </Button>
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
@@ -188,11 +189,11 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
             type="button"
             onClick={onResend}
             disabled={pending || busy !== null}
-            className="font-semibold text-accent-foreground hover:underline disabled:opacity-50"
+            className="inline-flex min-h-11 items-center font-semibold text-accent-foreground hover:underline disabled:opacity-50"
           >
             {busy === "resend" ? t("sending") : ti("resend")}
           </button>
-          <button type="button" onClick={onRestart} disabled={pending || busy !== null} className="text-muted-foreground hover:underline disabled:opacity-50">
+          <button type="button" onClick={onRestart} disabled={pending || busy !== null} className="inline-flex min-h-11 items-center text-muted-foreground hover:underline disabled:opacity-50">
             {ti("startOver")}
           </button>
         </div>
@@ -201,7 +202,7 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={pending}>
       <AuthHeadingClient
         title={invited ? ti("signUpTitle") : t("requestAccess")}
         lead={invited ? (invite?.invitedBy ? ti("signUpLead", { name: invite.invitedBy }) : ti("signUpLeadAnonymous")) : t("requestLead")}
@@ -217,16 +218,19 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
           maxLength={30}
           pattern="[A-Za-z0-9_.]+"
           autoComplete="username"
+          aria-describedby="username-hint"
+          autoCapitalize="none"
+          spellCheck={false}
           value={values.username}
           onChange={set("username")}
           className={fieldClass}
         />
       </Field>
       <Field id="email" label={t("email")}>
-        <Input id="email" type="email" required autoComplete="email" value={values.email} onChange={set("email")} className={fieldClass} />
+        <Input id="email" type="email" inputMode="email" autoCapitalize="none" spellCheck={false} required autoComplete="email" value={values.email} onChange={set("email")} className={fieldClass} />
       </Field>
       <Field id="password" label={t("password")} hint={t("passwordHint")}>
-        <Input id="password" type="password" required minLength={8} autoComplete="new-password" value={values.password} onChange={set("password")} className={fieldClass} />
+        <Input id="password" type="password" required minLength={8} autoComplete="new-password" aria-describedby="password-hint" value={values.password} onChange={set("password")} className={fieldClass} />
       </Field>
       <Field id="relation" label={t("relation")}>
         <Input id="relation" maxLength={120} value={values.relation} onChange={set("relation")} className={fieldClass} />
@@ -236,7 +240,7 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
           {error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending} className="mt-1 h-11 rounded-xl text-base">
+      <Button type="submit" disabled={pending} className="mt-1 h-12 rounded-lg text-base">
         {invited ? (pending ? ti("joining") : ti("join")) : pending ? t("sending") : t("sendRequest")}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
@@ -254,7 +258,7 @@ export function Field({ id, label, hint, children }: { id: string; label: string
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
+      {hint ? <span id={`${id}-hint`} className="text-sm leading-relaxed text-muted-foreground">{hint}</span> : null}
     </div>
   );
 }

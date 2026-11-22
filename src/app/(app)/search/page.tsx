@@ -35,14 +35,14 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
       {results && results.albums.length > 0 ? (
         <section className="mb-10">
-          <h2 className="mb-2 font-display text-xl font-bold">{t("albums")}</h2>
+          <h2 className="mb-2 font-display text-2xl font-medium">{t("albums")}</h2>
           <AlbumGrid albums={results.albums} />
         </section>
       ) : null}
 
       {results && results.media.length > 0 ? (
         <section>
-          <h2 className="mb-3 font-display text-xl font-bold">{t("photos")}</h2>
+          <h2 className="mb-3 font-display text-2xl font-medium">{t("photos")}</h2>
           <MediaGallery groups={[{ key: `search-${query}`, items: results.media }]} />
         </section>
       ) : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, House, Images, Menu, Upload } from "lucide-react";
+import { CalendarDays, House, Images, Menu, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -21,23 +21,23 @@ export function BottomBar() {
         href={href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex flex-col items-center gap-1 pt-1.5 text-[11px] font-bold text-muted-foreground",
+          "flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs font-medium text-muted-foreground transition-colors",
           active && "text-accent-foreground",
         )}
       >
-        <Icon className="size-6" />
+        <Icon className="size-5" strokeWidth={active ? 2.2 : 1.7} />
         {label}
       </Link>
     );
   };
 
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-end border-t bg-sidebar/95 px-2 pt-1 backdrop-blur lg:hidden">
+    <nav aria-label={t("home")} className="pb-safe fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-center gap-1 border-t bg-background/95 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-2 backdrop-blur-sm lg:hidden">
       {tab("/home", t("home"), House)}
       {tab("/albums", t("albums"), Images)}
-      <button type="button" onClick={() => open()} aria-label={tc("upload")} className="flex justify-center">
-        <span className="-mt-6 grid size-13 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_18px_rgb(180_85_47/0.35)]">
-          <Upload className="size-6" />
+      <button type="button" onClick={() => open()} aria-label={tc("upload")} className="flex min-h-12 items-center justify-center rounded-lg transition-transform active:scale-95">
+        <span className="grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground">
+          <Plus className="size-6" />
         </span>
       </button>
       {tab("/timeline", t("timeline"), CalendarDays)}

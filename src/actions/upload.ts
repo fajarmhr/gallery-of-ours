@@ -18,10 +18,11 @@ import {
   type CloudinaryUploadTarget,
 } from "@/lib/cloudinary";
 import { env } from "@/lib/env";
+import { mediaFileInfo } from "@/lib/media-file";
 import { processMedia } from "@/lib/media-processing";
 import { assertCanEditAlbum, isAdmin, isAlbumLocked, PermissionError } from "@/lib/permissions";
 import { actionUser } from "@/lib/session";
-import { mediaKeys, storage } from "@/lib/storage";
+import { mediaKeys, ROOT_FOLDER, storage } from "@/lib/storage";
 import { albumFolder, claimPath, displayNameOf, folderPath, removeStoredMedia } from "@/lib/storage-layout";
 
 /** A single presigned PUT to R2 can carry up to 5 GB. */
@@ -95,12 +96,11 @@ export async function startUploads(albumId: string, rawItems: UploadItemInput[],
     const results: StartedUpload[] = [];
 
     for (const item of parsed.data) {
-      const isImage = item.mime.startsWith("image/") || /\.(heic|heif)$/i.test(item.name);
-      const isVideo = item.mime.startsWith("video/");
-      if ((item.type === "photo" && !isImage) || (item.type === "video" && !isVideo)) throw new UserError("unsupported_file");
+      const info = mediaFileInfo(item.name, item.mime);
+      if (info.type !== item.type) throw new UserError("unsupported_file");
 
       const id = crypto.randomUUID();
-      const mime = item.mime || "application/octet-stream";
+      const mime = info.mime;
       const hasGps = item.lat !== null && item.lng !== null;
       const row = {
         id,
@@ -123,7 +123,8 @@ export async function startUploads(albumId: string, rawItems: UploadItemInput[],
 
       if (cloudName) {
         // Cloudinary makes its own sizes and video stills, so the JPEGs made in the browser aren't sent.
-        const values = { ...row, source, originalKey: id };
+        // Fixed-folder uploads include the folder in public_id; cancellation must target that same asset.
+        const values = { ...row, source, originalKey: folder ? id : `${ROOT_FOLDER}/${id}` };
         if (!folder) {
           await db.insert(media).values(values);
           results.push({ clientId: item.clientId, mediaId: id, cloudinary: cloudinaryUploadTarget(cloudName, { id, type: item.type }) });

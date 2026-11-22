@@ -70,7 +70,7 @@ export default async function RecapYearPage({ params }: PageProps<"/recap/[year]
   return (
     <>
       {back}
-      <section className="relative mb-6 flex min-h-[340px] items-end overflow-hidden rounded-3xl bg-[#2e241d] text-white">
+      <section className="relative mb-6 flex min-h-[340px] items-end overflow-hidden rounded-xl bg-[#2e241d] text-white">
         <ThumbhashImage src={mediaUrl(hero.id, "large")} thumbhash={hero.thumbhash} className="absolute inset-0" imgClassName="animate-kenburns" eager />
         <div className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/90 via-[#1c120e]/25 to-transparent" />
         <div className="relative flex w-full flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
@@ -96,7 +96,7 @@ export default async function RecapYearPage({ params }: PageProps<"/recap/[year]
 
       {recap.loved.length > 0 ? (
         <section className="mt-10">
-          <h2 className="mb-3 font-display text-xl font-bold">{t("mostLoved")}</h2>
+          <h2 className="mb-3 font-display text-2xl font-medium">{t("mostLoved")}</h2>
           <MediaGallery groups={[{ key: `loved-${year}`, items: recap.loved }]} />
         </section>
       ) : null}

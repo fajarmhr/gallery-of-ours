@@ -1,6 +1,7 @@
 "use client";
 
 import { ThemeProvider } from "next-themes";
+import { MotionConfig } from "motion/react";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,10 +23,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       // <script> tags, so mark it as a non-executable data block there (next-themes suppresses the mismatch).
       scriptProps={{ type: typeof window === "undefined" ? "text/javascript" : "application/json" }}
     >
-      <TooltipProvider delayDuration={300}>
-        {children}
-        <Toaster position="top-center" richColors closeButton />
-      </TooltipProvider>
+      <MotionConfig reducedMotion="user">
+        <TooltipProvider delayDuration={300}>
+          {children}
+          <Toaster position="top-center" richColors closeButton />
+        </TooltipProvider>
+      </MotionConfig>
     </ThemeProvider>
   );
 }

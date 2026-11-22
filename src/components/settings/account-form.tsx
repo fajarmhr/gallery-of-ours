@@ -51,9 +51,9 @@ export function AccountForm({ user }: Props) {
     <div className="flex flex-col gap-6">
       <form onSubmit={saveName} className="flex flex-col gap-2">
         <Label htmlFor="display-name">{t("displayName")}</Label>
-        <div className="flex gap-2">
-          <Input id="display-name" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className="h-10 rounded-xl" />
-          <Button type="submit" disabled={saving || name.trim() === user.name} className="h-10 rounded-xl px-4">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input id="display-name" autoComplete="name" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className="h-10 rounded-xl" />
+          <Button type="submit" disabled={saving || !name.trim() || name.trim() === user.name} className="h-10 rounded-xl px-4">
             {saving ? tc("saving") : tc("save")}
           </Button>
         </div>
@@ -61,10 +61,10 @@ export function AccountForm({ user }: Props) {
 
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 text-sm">
         <dt className="text-muted-foreground">{t("username")}</dt>
-        <dd className="font-medium">{user.username ? `@${user.username}` : "—"}</dd>
+        <dd className="min-w-0 font-medium [overflow-wrap:anywhere]">{user.username ? `@${user.username}` : "—"}</dd>
         <dt className="text-muted-foreground">{t("email")}</dt>
-        <dd className="flex flex-wrap items-center gap-2 font-medium">
-          {user.email}
+        <dd className="flex min-w-0 flex-wrap items-center gap-2 font-medium">
+          <span className="min-w-0 [overflow-wrap:anywhere]">{user.email}</span>
           {user.emailVerified ? (
             <span className="inline-flex items-center gap-1 text-xs font-bold text-olive">
               <BadgeCheck className="size-3.5" />
@@ -73,7 +73,7 @@ export function AccountForm({ user }: Props) {
           ) : null}
         </dd>
         <dt className="text-muted-foreground">{t("role")}</dt>
-        <dd className="font-medium">{user.roleLabel}</dd>
+        <dd className="min-w-0 font-medium [overflow-wrap:anywhere]">{user.roleLabel}</dd>
       </dl>
 
       <form onSubmit={changePassword} className="flex flex-col gap-3 border-t pt-5">

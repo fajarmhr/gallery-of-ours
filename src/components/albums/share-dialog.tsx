@@ -105,7 +105,7 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
           {links && links.length === 0 ? <p className="text-sm text-muted-foreground">{t("noLinks")}</p> : null}
           {links?.map((link) => (
             <div key={link.id} className={cn("flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3", !link.active && "opacity-60")}>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-full sm:basis-0">
                 <p className="truncate font-mono text-xs">{link.url}</p>
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                   {link.active ? (link.expiresAt ? t("expiresOn", { date: format.dateTime(new Date(link.expiresAt), { dateStyle: "medium" }) }) : t("never")) : t("off")}

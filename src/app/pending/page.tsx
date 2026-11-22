@@ -28,7 +28,7 @@ export default async function PendingPage() {
         />
         <div className="flex flex-wrap gap-2">
           {!rejected ? (
-            <Button asChild className="h-10 rounded-xl px-4">
+            <Button asChild className="h-11 rounded-lg px-5">
               <Link href="/home">{t("checkAgain")}</Link>
             </Button>
           ) : null}

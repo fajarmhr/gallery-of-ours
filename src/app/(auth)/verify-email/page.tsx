@@ -14,7 +14,7 @@ export default async function VerifyEmailPage({ searchParams }: PageProps<"/veri
   return (
     <>
       <AuthHeading icon={<MailCheck className="size-7" />} title={t("checkEmailTitle")} lead={t("checkEmailText", { email })} />
-      <Button asChild variant="outline" className="h-11 w-full rounded-xl">
+      <Button asChild variant="outline" className="h-12 w-full rounded-lg">
         <Link href="/sign-in">{t("backToSignIn")}</Link>
       </Button>
     </>

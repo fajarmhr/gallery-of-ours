@@ -121,7 +121,7 @@ export function AlbumFormDialog({
               </SelectContent>
             </Select>
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <FormField id="startDate" label={t("fieldStart")}>
               <Input id="startDate" type="date" value={values.startDate} onChange={(e) => set("startDate", e.target.value)} className="h-11 rounded-xl" />
             </FormField>
@@ -151,7 +151,7 @@ export function AlbumFormDialog({
 
 function FormField({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       {children}
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}

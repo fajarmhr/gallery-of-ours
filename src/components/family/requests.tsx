@@ -36,15 +36,17 @@ export function RequestsList({ requests }: { requests: Request[] }) {
     <ul className="divide-y">
       {requests.map((request) => (
         <li key={request.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
-          <UserAvatar name={request.name} />
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="font-semibold">{request.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {[request.username ? `@${request.username}` : null, request.email, t("requested", { date: format.relativeTime(new Date(request.createdAt)) })]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            {request.relationNote ? <p className="mt-1 text-sm italic">“{request.relationNote}”</p> : null}
+          <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1 sm:basis-48">
+            <UserAvatar name={request.name} />
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="font-semibold [overflow-wrap:anywhere]">{request.name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {[request.username ? `@${request.username}` : null, request.email, t("requested", { date: format.relativeTime(new Date(request.createdAt)) })]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              {request.relationNote ? <p className="mt-1 text-sm italic [overflow-wrap:anywhere]">“{request.relationNote}”</p> : null}
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" disabled={busy === request.id} onClick={() => decide(request, false)} className="h-9 rounded-lg">

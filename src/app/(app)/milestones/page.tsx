@@ -55,12 +55,12 @@ export default async function MilestonesPage() {
             const Icon = ICONS[kind];
             const original = new Date(`${m.date}T12:00:00`);
             return (
-              <li key={m.id} className="flex items-start gap-3 rounded-3xl border bg-card p-4">
+              <li key={m.id} className="flex flex-wrap items-start gap-3 rounded-xl border bg-card p-4">
                 <span className={kind === "birthday" ? "grid size-11 shrink-0 place-items-center rounded-2xl bg-olive-soft text-olive" : "grid size-11 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground"}>
                   <Icon className="size-5" />
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{m.title}</p>
+                <div className="min-w-0 flex-1 basis-32">
+                  <p className="font-semibold [overflow-wrap:anywhere]">{m.title}</p>
                   <p className="text-sm text-muted-foreground">{format.dateTime(original, { dateStyle: "long" })}</p>
                   {m.next ? (
                     <p className="mt-1 text-sm font-semibold text-accent-foreground">
@@ -73,7 +73,7 @@ export default async function MilestonesPage() {
                   ) : null}
                 </div>
                 {admin ? (
-                  <div className="flex">
+                  <div className="ml-auto flex shrink-0">
                     <MilestoneDialog
                       milestone={{ id: m.id, title: m.title, date: m.date, kind, repeatsYearly: m.repeatsYearly }}
                       trigger={

@@ -29,7 +29,7 @@ export default async function GlobePage({ searchParams }: PageProps<"/globe">) {
       {selected ? (
         <section className="mt-10">
           <div className="mb-4 flex flex-wrap items-baseline gap-x-3">
-            <h2 className="font-display text-2xl font-bold tracking-tight">{selected.name}</h2>
+            <h2 className="font-display text-3xl font-medium tracking-tight">{selected.name}</h2>
             <span className="text-sm text-muted-foreground">{t("photosHere")}</span>
           </div>
           <MediaGallery groups={[{ key: selected.id, items }]} />

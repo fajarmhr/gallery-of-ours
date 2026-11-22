@@ -54,9 +54,9 @@ export default async function AlbumPage({ params }: PageProps<"/albums/[albumId]
     return (
       <>
         {back}
-        <div className="flex flex-col items-center rounded-3xl border border-dashed bg-card/60 px-6 py-14 text-center">
+        <div className="flex flex-col items-center rounded-xl border border-dashed bg-card/60 px-6 py-14 text-center">
           <SealedEnvelope className="mb-8 w-48 -rotate-3 sm:w-56" />
-          <h1 className="text-balance font-display text-3xl font-extrabold tracking-tight">{album.title}</h1>
+          <h1 className="text-balance font-display text-3xl font-medium tracking-tight">{album.title}</h1>
           <p className="mt-2 font-semibold">{t("lockedTitle", { date: format.dateTime(album.unlockAt!, { dateStyle: "long" }) })}</p>
           <p className="mt-1 max-w-[46ch] text-pretty text-muted-foreground">{t("lockedText", { count: days })}</p>
           {row.createdByName ? <p className="mt-4 inline-block -rotate-2 font-hand text-2xl text-note">{tcap("sealedBy", { name: row.createdByName })}</p> : null}

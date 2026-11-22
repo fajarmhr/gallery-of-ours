@@ -16,7 +16,8 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import { toast } from "sonner";
 import { setAlbumCover } from "@/actions/albums";
 import { moveMedia, trashMedia } from "@/actions/media";
@@ -72,7 +73,14 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   const [locationOpen, setLocationOpen] = useState(false);
   const [socialState, setSocialState] = useState<{ id: string; data: MediaSocial } | null>(null);
   const [socialVersion, setSocialVersion] = useState(0);
+  const [socialErrorId, setSocialErrorId] = useState<string | null>(null);
   const [burst, setBurst] = useState(0);
+  const [favoriting, setFavoriting] = useState(false);
+  const [videoLoadedId, setVideoLoadedId] = useState<string | null>(null);
+  const [videoErrorId, setVideoErrorId] = useState<string | null>(null);
+  const [videoAttempt, setVideoAttempt] = useState(0);
+  const dialog = useRef<HTMLDivElement>(null);
+  const returnFocus = useRef<HTMLElement | null>(null);
   const social = socialState?.id === item.id ? socialState.data : null;
 
   const go = useCallback(
@@ -88,14 +96,31 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // The location dialog handles its own keys, including Escape.
-      if (locationOpen || (event.target as HTMLElement)?.closest("input, textarea")) return;
-      if (event.key === "Escape") onClose();
+      if (event.defaultPrevented || locationOpen || (event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable], [role=menu]")) return;
       if (event.key === "ArrowRight") go(1);
       if (event.key === "ArrowLeft") go(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [go, onClose, locationOpen]);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const overlay = dialog.current;
+    if (!viewport || !overlay) return;
+    // Mobile keyboards resize the visual viewport without always resizing fixed-position elements.
+    const resize = () => {
+      overlay.style.height = `${viewport.height}px`;
+      overlay.style.top = `${viewport.offsetTop}px`;
+    };
+    resize();
+    viewport.addEventListener("resize", resize);
+    viewport.addEventListener("scroll", resize);
+    return () => {
+      viewport.removeEventListener("resize", resize);
+      viewport.removeEventListener("scroll", resize);
+    };
+  }, []);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -114,14 +139,23 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
     if (readOnly) return;
     let cancelled = false;
     getMediaSocial(item.id).then((result) => {
-      if (!cancelled && result.ok) setSocialState({ id: item.id, data: result.data });
+      if (cancelled) return;
+      if (result.ok) {
+        setSocialState({ id: item.id, data: result.data });
+        setSocialErrorId(null);
+      } else setSocialErrorId(item.id);
+    }).catch(() => {
+      if (!cancelled) setSocialErrorId(item.id);
     });
     return () => {
       cancelled = true;
     };
   }, [item.id, readOnly, socialVersion]);
 
-  const reloadSocial = useCallback(() => setSocialVersion((v) => v + 1), []);
+  const reloadSocial = useCallback(() => {
+    setSocialErrorId(null);
+    setSocialVersion((v) => v + 1);
+  }, []);
 
   useEffect(() => {
     for (const neighbour of [items[index + 1], items[index - 1]]) {
@@ -146,12 +180,19 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   const fail = (code: string) => toast.error(te.has(code) ? te(code) : te("unknown"));
 
   async function onFavorite() {
-    if (!social) return;
+    if (!social || favoriting) return;
+    setFavoriting(true);
     // The heart bursts straight away; the server catches up.
     if (!social.favorited) setBurst((n) => n + 1);
-    const result = await toggleFavorite(item.id);
-    if (!result.ok) return fail(result.error);
-    setSocialState((s) => (s && s.id === item.id ? { ...s, data: { ...s.data, favorited: result.data.favorited } } : s));
+    try {
+      const result = await toggleFavorite(item.id);
+      if (!result.ok) return fail(result.error);
+      setSocialState((s) => (s && s.id === item.id ? { ...s, data: { ...s.data, favorited: result.data.favorited } } : s));
+    } catch {
+      fail("network");
+    } finally {
+      setFavoriting(false);
+    }
   }
 
   /** A double tap on a photo favorites it. It never removes a favorite, so another double tap only bursts again. */
@@ -188,18 +229,31 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
   const commentCount = social?.comments.length ?? 0;
 
   return (
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogPrimitive.Portal container={document.body}>
+        <DialogPrimitive.Content
+          asChild
+          aria-describedby={undefined}
+          onOpenAutoFocus={() => { returnFocus.current = document.activeElement as HTMLElement | null; }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            returnFocus.current?.focus({ preventScroll: true });
+          }}
+        >
     <motion.div
+      ref={dialog}
       role="dialog"
       aria-modal="true"
       aria-label={caption ?? item.albumTitle ?? t("info")}
-      className="fixed inset-0 z-50 flex bg-[#0f0b09] text-[#f2e9df]"
+      className="fixed inset-x-0 top-0 z-50 flex h-dvh overflow-hidden bg-[#0f0b09] text-[#f2e9df] outline-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
     >
+      <DialogPrimitive.Title className="sr-only">{caption ?? item.albumTitle ?? t("info")}</DialogPrimitive.Title>
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-1 bg-gradient-to-b from-black/70 to-transparent p-2 sm:p-3">
+        <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-1 bg-gradient-to-b from-black/70 to-transparent px-[max(.5rem,env(safe-area-inset-left))] pb-2 pt-[max(.5rem,env(safe-area-inset-top))] pr-[max(.5rem,env(safe-area-inset-right))] sm:pb-3">
           <ViewerButton label={tc("close")} onClick={onClose}>
             <X />
           </ViewerButton>
@@ -208,7 +262,7 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
           </span>
           <div className="ml-auto flex items-center gap-1">
             {!readOnly ? (
-              <ViewerButton label={social?.favorited ? t("unfavorite") : t("favorite")} onClick={onFavorite} disabled={!social}>
+              <ViewerButton label={social?.favorited ? t("unfavorite") : t("favorite")} onClick={onFavorite} disabled={!social || favoriting}>
                 <Heart className={cn(social?.favorited && "fill-[#ff8f7a] text-[#ff8f7a]")} />
               </ViewerButton>
             ) : null}
@@ -226,14 +280,14 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
               href={mediaUrl(item.id, "download", shareToken)}
               aria-label={t("downloadOriginal")}
               title={t("downloadOriginal")}
-              className="grid size-10 place-items-center rounded-full text-white/90 hover:bg-white/10 [&_svg]:size-5"
+              className="grid size-11 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 [&_svg]:size-5"
             >
               <Download />
             </a>
             {social?.canEdit ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button type="button" aria-label={tc("more")} className="grid size-10 place-items-center rounded-full text-white/90 hover:bg-white/10 [&_svg]:size-5">
+                  <button type="button" aria-label={tc("more")} className="grid size-11 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 [&_svg]:size-5">
                     <Ellipsis />
                   </button>
                 </DropdownMenuTrigger>
@@ -293,21 +347,37 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
               className="h-full w-full"
             >
               {item.type === "video" ? (
-                <div className="flex h-full w-full items-center justify-center px-2 pb-28 pt-16 sm:px-14">
+                <div className="flex h-full w-full items-center justify-center px-[max(.5rem,env(safe-area-inset-left))] pr-[max(.5rem,env(safe-area-inset-right))] pb-[calc(8rem+env(safe-area-inset-bottom))] pt-[calc(4.5rem+env(safe-area-inset-top))] sm:pl-[max(3.5rem,env(safe-area-inset-left))] sm:pr-[max(3.5rem,env(safe-area-inset-right))] landscape:pb-[calc(5rem+env(safe-area-inset-bottom))] landscape:pt-[calc(4rem+env(safe-area-inset-top))]">
                   <video
+                    key={videoAttempt}
                     src={mediaUrl(item.id, "original", shareToken)}
                     poster={mediaUrl(item.id, "large", shareToken)}
                     controls
                     autoPlay
                     playsInline
+                    onLoadedData={() => {
+                      setVideoLoadedId(item.id);
+                      setVideoErrorId((errorId) => errorId === item.id ? null : errorId);
+                    }}
+                    onError={() => setVideoErrorId(item.id)}
                     className="max-h-full max-w-full rounded-lg bg-black"
                   />
+                  {videoErrorId === item.id ? (
+                    <div role="alert" className="absolute flex max-w-xs flex-col items-center gap-3 rounded-xl bg-[#211e1b] p-5 text-center text-sm">
+                      <p>{te("unknown")}</p>
+                      <button type="button" className="min-h-11 rounded-lg border border-white/25 px-4 hover:bg-white/10" onClick={() => {
+                        setVideoErrorId(null);
+                        setVideoLoadedId(null);
+                        setVideoAttempt((attempt) => attempt + 1);
+                      }}>{tc("retry")}</button>
+                    </div>
+                  ) : videoLoadedId !== item.id ? <p role="status" className="pointer-events-none absolute text-sm text-white/75">{tc("loading")}</p> : null}
                 </div>
               ) : (
                 <ZoomableImage
                   layoutId={item.id === morphId ? `media-${item.id}` : undefined}
                   src={mediaUrl(item.id, "large", shareToken)}
-                  alt={caption ?? ""}
+                  alt={caption ?? item.originalName ?? item.albumTitle ?? t("info")}
                   aspectRatio={`${item.width} / ${item.height}`}
                   poster={thumbhashDataUrl(item.thumbhash)}
                   onDoubleTap={onPhotoDoubleTap}
@@ -331,14 +401,14 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
           ) : null}
         </div>
 
-        <div className="glass pointer-events-none absolute inset-x-3 bottom-3 z-10 rounded-2xl px-4 py-3 text-white sm:inset-x-6 sm:bottom-5">
+        <div className="glass absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] left-[max(.75rem,env(safe-area-inset-left))] right-[max(.75rem,env(safe-area-inset-right))] z-10 max-h-[24%] touch-pan-y overflow-y-auto overscroll-contain rounded-xl px-4 py-3 text-white sm:left-[max(1.5rem,env(safe-area-inset-left))] sm:right-[max(1.5rem,env(safe-area-inset-right))] landscape:max-h-[20%] landscape:py-2">
           {takenAt ? (
             <p className="date-stamp mb-0.5 text-xs sm:text-sm">
               {format.dateTime(takenAt, { dateStyle: "medium" })} · {format.relativeTime(takenAt, now)}
             </p>
           ) : null}
-          {caption ? <p className="font-display text-lg font-bold leading-snug">{caption}</p> : null}
-          {meta ? <p className="text-sm text-white/85">{meta}</p> : null}
+          {caption ? <p className="break-words font-display text-lg font-bold leading-snug">{caption}</p> : null}
+          {meta ? <p className="break-words text-sm text-white/85">{meta}</p> : null}
           {lovedBy ? (
             <p className="mt-1 flex items-center gap-1.5 text-xs text-white/80">
               <Heart className="size-3.5 shrink-0 fill-[#ff8f7a] text-[#ff8f7a]" />
@@ -356,9 +426,9 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
             transition={{ duration: 0.25, ease: EASE }}
-            className="fixed inset-x-0 bottom-0 z-30 max-h-[72dvh] overflow-y-auto rounded-t-3xl border-t bg-card text-card-foreground shadow-2xl lg:static lg:max-h-none lg:w-[380px] lg:rounded-none lg:border-l lg:border-t-0"
+            className="absolute inset-x-0 bottom-0 z-30 max-h-[72%] overflow-y-auto overscroll-contain rounded-t-xl border-t bg-card text-card-foreground [@media(max-height:500px)]:max-h-full lg:static lg:max-h-full lg:w-[min(380px,38vw)] lg:shrink-0 lg:rounded-none lg:border-l lg:border-t-0"
           >
-            <SocialPanel key={item.id} item={item} social={social} onChanged={reloadSocial} onClose={() => setPanelOpen(false)} />
+            <SocialPanel key={item.id} item={item} social={social} loadError={socialErrorId === item.id} onChanged={reloadSocial} onClose={() => setPanelOpen(false)} />
           </motion.aside>
         ) : null}
       </AnimatePresence>
@@ -367,6 +437,9 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
         <LocationDialog target={{ kind: "media", id: item.id }} open={locationOpen} onOpenChange={setLocationOpen} onSaved={() => router.refresh()} />
       ) : null}
     </motion.div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 
@@ -418,7 +491,7 @@ function ViewerButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "relative grid size-10 place-items-center rounded-full text-white/90 hover:bg-white/10 disabled:opacity-40 [&_svg]:size-5",
+        "relative grid size-11 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 disabled:opacity-40 [&_svg]:size-5",
         active && "bg-white/15",
       )}
     >
@@ -434,8 +507,8 @@ function NavArrow({ side, label, onClick, children }: { side: "left" | "right"; 
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "glass absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full text-white sm:grid [&_svg]:size-6",
-        side === "left" ? "left-3" : "right-3",
+        "glass absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full text-white [&_svg]:size-6",
+        side === "left" ? "left-[max(.75rem,env(safe-area-inset-left))]" : "right-[max(.75rem,env(safe-area-inset-right))]",
       )}
     >
       {children}

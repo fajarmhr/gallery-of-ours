@@ -88,7 +88,7 @@ export function InviteButton({ days }: { days: number }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl font-bold">{t("title")}</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-medium">{t("title")}</DialogTitle>
             <DialogDescription>{link ? t("ready") : t("text", { days })}</DialogDescription>
           </DialogHeader>
 

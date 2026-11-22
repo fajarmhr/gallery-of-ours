@@ -114,12 +114,14 @@ export function MembersList({
           return (
             <li key={member.id} className="py-3 first:pt-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <UserAvatar name={member.name} image={member.image} />
-                <div className="min-w-0 flex-1 leading-tight">
-                  <p className="truncate font-semibold">
-                    {member.name} {member.id === currentUserId ? <span className="font-normal text-muted-foreground">{t("you")}</span> : null}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">{member.username ? `@${member.username}` : member.email}</p>
+                <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1 sm:basis-48">
+                  <UserAvatar name={member.name} image={member.image} />
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <p className="truncate font-semibold">
+                      {member.name} {member.id === currentUserId ? <span className="font-normal text-muted-foreground">{t("you")}</span> : null}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">{member.username ? `@${member.username}` : member.email}</p>
+                  </div>
                 </div>
 
                 {canChangeRoles ? (
@@ -153,7 +155,7 @@ export function MembersList({
                 ) : null}
 
                 <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:min-w-[240px] sm:justify-end">
-                  <span className="text-right text-xs text-muted-foreground">{scopeLabel(member)}</span>
+                  <span className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere] sm:text-right">{scopeLabel(member)}</span>
                   {isMember ? (
                     <Switch
                       checked={Boolean(member.grant) || open}
@@ -175,11 +177,11 @@ export function MembersList({
 
               {open ? (
                 <div className="mt-3 flex flex-col gap-3 rounded-2xl border bg-background p-3">
-                  <p className="text-sm font-semibold">{t("editingAccess", { name: member.name })}</p>
+                  <p className="text-sm font-semibold [overflow-wrap:anywhere]">{t("editingAccess", { name: member.name })}</p>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="min-w-20 text-xs font-bold text-muted-foreground">{t("scope")}</span>
                     <Select value={scope} onValueChange={setScope}>
-                      <SelectTrigger className="h-9 min-w-[200px] rounded-xl">
+                      <SelectTrigger className="h-9 w-full min-w-0 max-w-full rounded-xl sm:w-64 [&_[data-slot=select-value]]:min-w-0">
                         <SelectValue placeholder={t("chooseAlbum")} />
                       </SelectTrigger>
                       <SelectContent>

@@ -18,7 +18,7 @@ export default async function SettingsPage() {
     <div className="max-w-3xl">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <div className="flex flex-col gap-5">
-        <section className="divide-y rounded-3xl border bg-card px-5">
+        <section className="divide-y rounded-xl border bg-card px-5">
           <SettingRow title={t("language")} hint={t("languageHint")}>
             <LanguageSwitch />
           </SettingRow>
@@ -27,19 +27,19 @@ export default async function SettingsPage() {
           </SettingRow>
         </section>
 
-        <section className="rounded-3xl border bg-card p-5">
-          <h2 className="mb-4 font-display text-lg font-bold">{t("account")}</h2>
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="mb-4 font-display text-2xl font-medium">{t("account")}</h2>
           <AccountForm
             user={{ name: user.name, username: user.username, email: user.email, emailVerified: user.emailVerified, roleLabel: tr(user.role) }}
           />
         </section>
 
-        <section className="flex items-start gap-4 rounded-3xl border bg-card p-5">
+        <section className="flex items-start gap-4 rounded-xl border bg-card p-5">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground">
             <Smartphone className="size-5" />
           </span>
           <div>
-            <h2 className="font-display text-lg font-bold">{t("installTitle")}</h2>
+            <h2 className="font-display text-2xl font-medium">{t("installTitle")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t("installText")}</p>
           </div>
         </section>

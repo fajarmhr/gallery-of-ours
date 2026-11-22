@@ -88,7 +88,7 @@ export default async function SharedAlbumPage({ params }: PageProps<"/s/[token]"
       <p className="mb-3 inline-block origin-left -rotate-2 font-hand text-2xl text-note sm:text-3xl">
         {sharerName ? t("welcomeFrom", { name: sharerName }) : t("welcome")}
       </p>
-      <section className="relative mb-8 flex min-h-[280px] items-end overflow-hidden rounded-3xl bg-[#2e241d] text-white sm:min-h-[340px]">
+      <section className="relative mb-8 flex min-h-[280px] items-end overflow-hidden rounded-xl bg-[#2e241d] text-white sm:min-h-[340px]">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={mediaUrl(cover.id, "large", token)} alt="" className="absolute inset-0 h-full w-full animate-kenburns object-cover" />

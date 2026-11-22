@@ -4,6 +4,7 @@ import "react-photo-album/rows.css";
 import { LoaderCircle, Play } from "lucide-react";
 import { AnimatePresence, LayoutGroup } from "motion/react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { RowsPhotoAlbum, type Photo } from "react-photo-album";
 import { formatDuration, mediaUrl } from "@/lib/format";
@@ -29,6 +30,8 @@ export function MediaGallery({
   moveTargets?: MoveTarget[];
 }) {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("design");
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const offsets = useMemo(
     () => groups.map((_, i) => groups.slice(0, i).reduce((sum, g) => sum + g.items.length, 0)),
@@ -48,16 +51,16 @@ export function MediaGallery({
     <LayoutGroup>
       <div className="flex flex-col gap-9">
         {groups.map((group, groupIndex) => (
-          <section key={group.key} id={`group-${group.key}`} className="scroll-mt-20">
+          <section key={group.key} id={`group-${group.key}`} className="scroll-mt-24">
             {group.divider ? (
-              <h2 className="sticky top-16 z-10 -mx-1 mb-4 flex flex-wrap items-baseline gap-x-3 border-b bg-background/90 px-1 py-2 backdrop-blur">
-                <span className="font-display text-3xl font-extrabold tracking-tight">{group.divider}</span>
+              <h2 className="sticky top-[calc(4.75rem+env(safe-area-inset-top))] z-10 -mx-1 mb-5 flex flex-wrap items-baseline gap-x-3 border-b bg-background/95 px-1 py-3 backdrop-blur-sm">
+                <span className="font-display text-4xl font-normal tracking-tight">{group.divider}</span>
                 {group.dividerNote ? <span className="inline-block -rotate-2 font-hand text-xl text-note">{group.dividerNote}</span> : null}
               </h2>
             ) : null}
             {group.title ? (
               <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-0.5">
-                <h3 className="font-display text-lg font-bold tracking-tight">{group.title}</h3>
+                <h3 className="font-display text-2xl font-medium tracking-tight">{group.title}</h3>
                 {group.subtitle ? <span className="text-sm text-muted-foreground">{group.subtitle}</span> : null}
               </div>
             ) : null}
@@ -67,11 +70,11 @@ export function MediaGallery({
                 src: mediaUrl(card.id, "thumb", shareToken),
                 width: card.width,
                 height: card.height,
-                alt: card.caption ?? card.aiCaption?.en ?? "",
+                alt: card.caption ?? card.aiCaption?.[locale === "id" ? "id" : "en"] ?? card.albumTitle ?? card.originalName ?? t("photoPreview"),
                 card,
               }))}
               targetRowHeight={(width) => (width < 480 ? 118 : width < 900 ? 170 : 220)}
-              spacing={(width) => (width < 480 ? 4 : 6)}
+              spacing={(width) => (width < 480 ? 6 : 10)}
               rowConstraints={{ singleRowMaxHeight: 300 }}
               onClick={({ index, photo }) => {
                 setOpenedId(photo.card.id);
@@ -84,15 +87,21 @@ export function MediaGallery({
                 },
               }}
               render={{
-                image: (props, { photo }) => (
+                image: (props, { photo, width, height }) => (
                   <ThumbhashImage
                     src={typeof props.src === "string" ? props.src : undefined}
                     alt={props.alt}
                     thumbhash={photo.card.thumbhash}
                     layoutId={`media-${photo.card.id}`}
-                    style={props.style}
-                    className="h-full w-full"
-                    imgClassName="transition-[filter,transform] duration-300 group-hover/tile:brightness-105"
+                    fallback={photo.card.type === "video" ? (
+                      <span className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Play className="size-7" strokeWidth={1.5} />
+                        <span className="text-xs">{t("videoPreview")}</span>
+                      </span>
+                    ) : undefined}
+                    style={{ ...props.style, aspectRatio: `${width} / ${height}` }}
+                    className={props.className}
+                    imgClassName="transition-transform duration-500 group-hover/tile:scale-[1.025] motion-reduce:transform-none"
                   />
                 ),
                 extras: (_, { photo }) => <TileBadges card={photo.card} />,

@@ -65,12 +65,12 @@ export function TrashView({ albums, media }: { albums: TrashAlbum[]; media: Tras
     <div className="flex flex-col gap-8 pb-16">
       {albums.length > 0 ? (
         <section>
-          <h2 className="mb-3 font-display text-lg font-bold">{t("albums")}</h2>
-          <ul className="divide-y rounded-3xl border bg-card">
+          <h2 className="mb-3 font-display text-2xl font-medium">{t("albums")}</h2>
+          <ul className="divide-y rounded-xl border bg-card">
             {albums.map((album) => (
               <li key={album.id} className="flex flex-wrap items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{album.title}</p>
+                <div className="min-w-0 flex-1 basis-full sm:basis-0">
+                  <p className="font-semibold [overflow-wrap:anywhere]">{album.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {tc("items", { count: album.itemCount })} · {t("daysLeft", { count: daysLeft(album.deletedAt) })}
                   </p>
@@ -91,7 +91,7 @@ export function TrashView({ albums, media }: { albums: TrashAlbum[]; media: Tras
 
       {media.length > 0 ? (
         <section>
-          <h2 className="mb-3 font-display text-lg font-bold">{t("items")}</h2>
+          <h2 className="mb-3 font-display text-2xl font-medium">{t("items")}</h2>
           <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-7">
             {media.map((item) => {
               const isSelected = selected.has(item.id);
@@ -100,6 +100,7 @@ export function TrashView({ albums, media }: { albums: TrashAlbum[]; media: Tras
                   key={item.id}
                   type="button"
                   aria-pressed={isSelected}
+                  aria-label={`${item.albumTitle} · ${t("daysLeft", { count: daysLeft(item.deletedAt) })}`}
                   onClick={() => toggle(item.id)}
                   className={cn("group relative aspect-square overflow-hidden rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring", isSelected && "ring-3 ring-primary")}
                 >
@@ -119,7 +120,7 @@ export function TrashView({ albums, media }: { albums: TrashAlbum[]; media: Tras
       ) : null}
 
       {selected.size > 0 ? (
-        <div className="fixed inset-x-3 bottom-24 z-40 mx-auto flex max-w-xl flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-xl lg:bottom-6">
+        <div className="fixed inset-x-3 bottom-24 z-40 mx-auto flex max-w-xl flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-[0_2px_8px_rgb(70_45_25/0.04)] lg:bottom-6">
           <span className="mr-auto text-sm font-semibold">{tc("selected", { count: selected.size })}</span>
           <Button variant="ghost" onClick={() => setSelected(new Set())} className="h-9 rounded-lg">
             {tc("clearSelection")}

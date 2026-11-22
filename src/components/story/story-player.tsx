@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ type Props = {
  * otherwise become the containing block of this fixed overlay and shrink it to that ancestor's box.
  */
 export function StoryPlayer(props: Props) {
+  if (props.slides.length === 0) return null;
   return createPortal(<StoryOverlay {...props} />, document.body);
 }
 
@@ -39,7 +41,9 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
   const [paused, setPaused] = useState(false);
   const [musicOn, setMusicOn] = useState(Boolean(musicUrl));
   const audio = useRef<HTMLAudioElement>(null);
-  const slide = slides[index]!;
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const contentPointer = useRef<{ x: number; y: number } | null>(null);
+  const slide = slides[Math.min(index, slides.length - 1)]!;
 
   const next = useCallback(() => {
     if (index < slides.length - 1) setIndex(index + 1);
@@ -49,10 +53,11 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.defaultPrevented || (event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable]")) return;
       if (event.key === "ArrowRight") next();
       if (event.key === "ArrowLeft") previous();
       if (event.key === " ") {
+        if ((event.target as HTMLElement)?.closest("button, a")) return;
         event.preventDefault();
         setPaused((p) => !p);
       }
@@ -78,15 +83,26 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
   }, [index, slides]);
 
   return (
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogPrimitive.Content
+        asChild
+        aria-describedby={undefined}
+        onOpenAutoFocus={() => { returnFocus.current = document.activeElement as HTMLElement | null; }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocus.current?.focus({ preventScroll: true });
+        }}
+      >
     <motion.div
       role="dialog"
       aria-modal="true"
       aria-label={heading}
-      className="fixed inset-0 z-[70] overflow-hidden bg-[#0f0b09] text-[#f2e9df]"
+      className="fixed inset-x-0 top-0 z-[70] h-dvh overflow-hidden bg-[#0f0b09] text-[#f2e9df] outline-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
+      <DialogPrimitive.Title className="sr-only">{heading}</DialogPrimitive.Title>
       {musicUrl ? <audio ref={audio} src={musicUrl} loop preload="auto" /> : null}
 
       <AnimatePresence mode="sync">
@@ -114,17 +130,17 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
         </motion.div>
       </AnimatePresence>
 
-      <button type="button" aria-label={tc("previous")} onClick={previous} className="absolute inset-y-0 left-0 z-10 w-1/3" />
-      <button type="button" aria-label={tc("next")} onClick={next} className="absolute inset-y-0 right-0 z-10 w-1/3" />
+      <button type="button" tabIndex={-1} aria-hidden="true" disabled={index === 0} onClick={previous} className="absolute inset-y-0 left-0 z-10 w-1/3" />
+      <button type="button" tabIndex={-1} aria-hidden="true" onClick={next} className="absolute inset-y-0 right-0 z-10 w-1/3" />
 
-      <div className="absolute inset-x-4 top-3 z-20 flex gap-1">
+      <div className="absolute left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] top-[calc(.75rem+env(safe-area-inset-top))] z-20 flex gap-1">
         {slides.map((s, i) => (
           <span key={s.key} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/25">
             {i < index ? <i className="block h-full w-full bg-white" /> : null}
             {i === index ? (
               <i
                 key={`${s.key}-${index}`}
-                className="block h-full animate-story-fill bg-white"
+                className="story-progress block h-full w-full animate-story-fill bg-white"
                 style={{ animationPlayState: paused ? "paused" : "running" }}
                 onAnimationEnd={next}
               />
@@ -133,19 +149,20 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
         ))}
       </div>
 
-      <div className="absolute inset-x-4 top-7 z-20 flex items-center gap-2 sm:inset-x-6">
-        <p className="mr-auto truncate text-sm font-semibold">{heading}</p>
+      <div className="absolute left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] top-[calc(1.75rem+env(safe-area-inset-top))] z-20 flex min-w-0 items-center gap-2">
+        <p className="mr-auto min-w-0 truncate text-sm font-semibold">{heading}</p>
         {musicUrl ? (
           <button
             type="button"
             onClick={() => setMusicOn((on) => !on)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-xs font-semibold"
+            aria-pressed={musicOn}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-semibold"
           >
             {musicOn ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
             {musicOn ? t("musicOn") : t("musicOff")}
           </button>
         ) : null}
-        <button type="button" onClick={onClose} aria-label={t("close")} className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+        <button type="button" onClick={onClose} aria-label={t("close")} className="grid size-11 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20">
           <X className="size-5" />
         </button>
       </div>
@@ -154,30 +171,42 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
         <motion.div
           key={slide.key}
           className={cn(
-            "pointer-events-none absolute z-20",
-            slide.image ? "inset-x-6 bottom-28 sm:inset-x-10" : "inset-x-6 top-1/2 -translate-y-1/2 text-center sm:inset-x-10",
+            "absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] left-[max(1.5rem,env(safe-area-inset-left))] right-[max(1.5rem,env(safe-area-inset-right))] top-[calc(6rem+env(safe-area-inset-top))] z-20 touch-pan-y overflow-y-auto overscroll-contain sm:left-[max(2.5rem,env(safe-area-inset-left))] sm:right-[max(2.5rem,env(safe-area-inset-right))]",
           )}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
+          onPointerDown={(event) => { contentPointer.current = { x: event.clientX, y: event.clientY }; }}
+          onPointerCancel={() => { contentPointer.current = null; }}
+          onPointerUp={(event) => {
+            const start = contentPointer.current;
+            contentPointer.current = null;
+            if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) return;
+            const box = event.currentTarget.getBoundingClientRect();
+            const position = (event.clientX - box.left) / box.width;
+            if (position < 1 / 3) previous();
+            else if (position > 2 / 3) next();
+          }}
         >
+          <div className={cn("flex min-h-full flex-col", slide.image ? "justify-end" : "justify-center text-center")}>
           {slide.note ? <p className="mb-1 inline-block -rotate-2 font-hand text-3xl text-[#ffd3a8]">{slide.note}</p> : null}
           {slide.stamp ? <p className="date-stamp mb-2 text-lg">{slide.stamp}</p> : null}
           <h2
             className={cn(
-              "text-balance font-display font-extrabold leading-[0.98] tracking-tight",
-              slide.image ? "max-w-[18ch] text-4xl sm:text-6xl" : "mx-auto max-w-[16ch] text-5xl sm:text-7xl",
+              "shrink-0 break-words text-balance font-display font-extrabold leading-[0.98] tracking-tight",
+              slide.image ? "max-w-[18ch] text-4xl sm:text-6xl landscape:text-3xl landscape:sm:text-4xl" : "mx-auto max-w-[16ch] text-5xl sm:text-7xl landscape:text-3xl landscape:sm:text-4xl",
             )}
           >
             {slide.title}
           </h2>
           {slide.meta ? <p className="mt-3 text-sm text-white/80 sm:text-base">{slide.meta}</p> : null}
+          </div>
         </motion.div>
       </AnimatePresence>
 
-      <div className="absolute inset-x-0 bottom-6 z-20 flex justify-center gap-3">
-        <StoryControl label={tc("previous")} onClick={previous}>
+      <div className="absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 flex justify-center gap-3">
+        <StoryControl label={tc("previous")} onClick={previous} disabled={index === 0}>
           <SkipBack />
         </StoryControl>
         <StoryControl label={paused ? tc("play") : tc("pause")} onClick={() => setPaused((p) => !p)}>
@@ -188,16 +217,19 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
         </StoryControl>
       </div>
     </motion.div>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Root>
   );
 }
 
-function StoryControl({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function StoryControl({ label, onClick, children, disabled }: { label: string; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="grid size-12 place-items-center rounded-full border border-white/25 bg-white/10 backdrop-blur hover:bg-white/20 [&_svg]:size-5"
+      disabled={disabled}
+      className="grid size-12 place-items-center rounded-full border border-white/25 bg-white/10 backdrop-blur hover:bg-white/20 disabled:opacity-40 [&_svg]:size-5"
     >
       {children}
     </button>

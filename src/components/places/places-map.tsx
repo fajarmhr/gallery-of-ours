@@ -79,7 +79,7 @@ export function PlacesMap({ points, selectedId }: { points: MapPoint[]; selected
   const dots = view ? index.getClusters(view.bounds, Math.floor(view.zoom)) : [];
 
   return (
-    <div className="h-[380px] overflow-hidden rounded-3xl border bg-muted sm:h-[460px] lg:h-[540px]">
+    <div className="h-[380px] overflow-hidden rounded-xl border bg-muted sm:h-[460px] lg:h-[540px]">
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}

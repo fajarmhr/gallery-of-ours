@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { finishAlbumMusicUpload, removeAlbumMusic, startAlbumMusicUpload, trashAlbum } from "@/actions/albums";
 import { LocationDialog } from "@/components/location/location-dialog";
+import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import { StoryButton, type StorySlide } from "@/components/story/story-player";
 import {
   AlertDialog,
@@ -90,34 +91,26 @@ export function AlbumHeader({ album, coverId, meta, placeName, canEdit, isAdmin,
   }
 
   return (
-    <header className="relative mb-8 overflow-hidden rounded-xl bg-[#2e241d] text-white">
-      <div className="absolute inset-0">
-        {coverId ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={mediaUrl(coverId, "large")} alt="" className="h-full w-full object-cover" />
-        ) : null}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1c120e]/80 via-[#1c120e]/35 to-[#1c120e]/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/70 via-transparent to-transparent" />
-      </div>
-
-      {/* Top padding keeps a long note or title clear of the button panel pinned to the top-right corner. */}
-      <div className="relative flex min-h-[260px] flex-col justify-end gap-4 p-5 pt-16 sm:min-h-[320px] sm:p-8 sm:pt-20">
-        <div className="glass absolute right-3 top-3 flex items-center gap-1 rounded-2xl p-1 sm:right-4 sm:top-4">
-          <StoryButton slides={slides} heading={album.title} musicUrl={album.hasMusic ? `/api/albums/${album.id}/music` : null} label={t("story")} variant="default" className="h-9 px-3" />
+    <header className="mb-10 overflow-hidden rounded-xl border bg-card">
+      <div className={coverId ? "grid lg:grid-cols-[1.1fr_.9fr]" : "grid"}>
+      <div className="flex min-w-0 flex-col p-5 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm font-medium text-primary">{t(album.category)}</span>
+          <div className="flex items-center gap-1">
           {isAdmin ? (
             <HeaderIcon label={t("shareLink")} onClick={() => setShareOpen(true)}>
               <Share2 />
             </HeaderIcon>
           ) : null}
           {itemCount > 0 ? (
-            <a href={`/api/albums/${album.id}/zip`} aria-label={t("downloadZip")} title={t("downloadZip")} className="grid size-9 place-items-center rounded-xl hover:bg-white/15 [&_svg]:size-[18px]">
+            <a href={`/api/albums/${album.id}/zip`} aria-label={t("downloadZip")} title={t("downloadZip")} className="grid size-11 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground [&_svg]:size-[18px]">
               <Download />
             </a>
           ) : null}
           {canEdit ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" aria-label={t("settings")} className="grid size-9 place-items-center rounded-xl hover:bg-white/15 [&_svg]:size-[18px]">
+                <button type="button" aria-label={t("settings")} className="grid size-11 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground [&_svg]:size-[18px]">
                   <Ellipsis />
                 </button>
               </DropdownMenuTrigger>
@@ -155,41 +148,47 @@ export function AlbumHeader({ album, coverId, meta, placeName, canEdit, isAdmin,
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}
+          </div>
         </div>
 
-        <div className="min-w-0 max-w-2xl [overflow-wrap:anywhere]">
-          {album.note ? <p className="mb-1 inline-block text-sm font-medium tracking-wide text-[#f0d5bc] sm:text-base">{album.note}</p> : null}
-          <h1 className="text-balance font-display text-4xl font-normal leading-[0.98] tracking-tight sm:text-6xl">{album.title}</h1>
-          <p className="mt-2 text-sm text-white/85 sm:text-base">{meta}</p>
+        <div className="my-6 min-w-0 max-w-2xl [overflow-wrap:anywhere] sm:my-8">
+          {album.note ? <p className="mb-3 text-sm leading-relaxed text-note">{album.note}</p> : null}
+          <h1 className="text-balance font-display text-4xl font-normal leading-[1.08] tracking-tight sm:text-5xl">{album.title}</h1>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{meta}</p>
           {placeName ? (
-            <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-white/85">
+            <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="size-4 shrink-0" />
               {placeName}
             </p>
           ) : null}
-          {album.description ? <p className="mt-3 max-w-[60ch] text-pretty text-sm text-white/80">{album.description}</p> : null}
+          {album.description ? <p className="mt-4 max-w-[60ch] text-pretty text-sm leading-relaxed text-muted-foreground">{album.description}</p> : null}
         </div>
 
+        <div className="mt-auto flex flex-wrap gap-2 border-t pt-5">
+          <StoryButton slides={slides} heading={album.title} musicUrl={album.hasMusic ? `/api/albums/${album.id}/music` : null} label={t("story")} variant="outline" className="h-11 rounded-lg px-4" />
         {canEdit ? (
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => openUpload(album.id)} className="h-10 rounded-xl px-4">
+          <>
+            <Button onClick={() => openUpload(album.id)} className="h-11 rounded-lg px-4">
               <Upload />
               {t("addPhotos")}
             </Button>
             {placeName ? null : (
-              <Button variant="ghost" onClick={() => setLocationOpen(true)} className="glass h-10 rounded-xl px-4 text-white hover:bg-white/25 hover:text-white">
+              <Button variant="ghost" onClick={() => setLocationOpen(true)} className="h-11 rounded-lg px-4">
                 <MapPin />
                 {tl("button")}
               </Button>
             )}
             {canImport ? (
-              <Button variant="ghost" onClick={() => setCloudinaryOpen(true)} className="glass h-10 rounded-xl px-4 text-white hover:bg-white/25 hover:text-white">
+              <Button variant="ghost" onClick={() => setCloudinaryOpen(true)} className="h-11 rounded-lg px-4">
                 <CloudDownload />
                 {tcl("button")}
               </Button>
             ) : null}
-          </div>
+          </>
         ) : null}
+        </div>
+      </div>
+      {coverId ? <ThumbhashImage src={mediaUrl(coverId, "large")} alt={album.title} className="aspect-[4/3] border-t lg:aspect-auto lg:min-h-[360px] lg:border-l lg:border-t-0" eager /> : null}
       </div>
 
       <input
@@ -254,7 +253,7 @@ export function AlbumHeader({ album, coverId, meta, placeName, canEdit, isAdmin,
 
 function HeaderIcon({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" aria-label={label} title={label} onClick={onClick} className="grid size-9 place-items-center rounded-xl hover:bg-white/15 [&_svg]:size-[18px]">
+    <button type="button" aria-label={label} title={label} onClick={onClick} className="grid size-11 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground [&_svg]:size-[18px]">
       {children}
     </button>
   );

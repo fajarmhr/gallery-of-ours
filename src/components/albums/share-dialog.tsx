@@ -20,6 +20,7 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
   const [expires, setExpires] = useState<number | null>(30);
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [version, setVersion] = useState(0);
   const reload = () => setVersion((v) => v + 1);
@@ -28,7 +29,13 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
     if (!open) return;
     let cancelled = false;
     listShareLinks(albumId).then((result) => {
-      if (!cancelled && result.ok) setLinks(result.data);
+      if (cancelled) return;
+      if (result.ok) {
+        setLinks(result.data);
+        setLoadError(null);
+      } else setLoadError(result.error);
+    }).catch(() => {
+      if (!cancelled) setLoadError("network");
     });
     return () => {
       cancelled = true;
@@ -47,8 +54,9 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
   }
 
   async function create() {
+    if (pending) return;
     setPending(true);
-    const result = await createShareLink(albumId, { expiresInDays: expires, password: password || null });
+    const result = await createShareLink(albumId, { expiresInDays: expires, password: password || null }).catch(() => ({ ok: false as const, error: "network" }));
     setPending(false);
     if (!result.ok) return fail(result.error);
     setPassword("");
@@ -61,11 +69,11 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl font-extrabold tracking-tight">{t("title")}</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-medium tracking-tight">{t("title")}</DialogTitle>
           <DialogDescription>{t("subtitle")}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 rounded-2xl border bg-background p-4">
+        <div className="flex flex-col gap-5 rounded-xl border bg-muted/35 p-4">
           <div className="flex flex-col gap-1.5">
             <Label>{t("expires")}</Label>
             <div className="flex flex-wrap gap-1.5">
@@ -80,8 +88,8 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
                   aria-pressed={expires === option.value}
                   onClick={() => setExpires(option.value)}
                   className={cn(
-                    "h-9 rounded-full border px-4 text-sm font-semibold",
-                    expires === option.value ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+                    "min-h-11 rounded-lg border px-4 text-sm font-medium transition-colors duration-200",
+                    expires === option.value ? "border-primary/30 bg-accent text-accent-foreground" : "border-border bg-card text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {option.label}
@@ -91,20 +99,21 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="share-password">{t("password")}</Label>
-            <Input id="share-password" type="text" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 rounded-xl" />
-            <p className="text-xs text-muted-foreground">{t("passwordHint")}</p>
+            <Input id="share-password" type="text" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 rounded-lg" />
+            <p className="text-sm leading-relaxed text-muted-foreground">{t("passwordHint")}</p>
           </div>
-          <Button onClick={create} disabled={pending} className="h-10 rounded-xl">
+          <Button onClick={create} disabled={pending} className="h-11 rounded-lg">
             <Link2 />
-            {t("create")}
+            {pending ? tc("saving") : t("create")}
           </Button>
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="font-display text-base font-bold">{t("links")}</p>
+          <p className="font-display text-xl font-medium">{t("links")}</p>
+          {loadError ? <p role="alert" className="text-sm text-destructive">{te.has(loadError) ? te(loadError) : te("unknown")} <button type="button" onClick={reload} className="min-h-11 px-2 font-medium underline underline-offset-4">{tc("retry")}</button></p> : links === null ? <p role="status" className="text-sm text-muted-foreground">{tc("loading")}</p> : null}
           {links && links.length === 0 ? <p className="text-sm text-muted-foreground">{t("noLinks")}</p> : null}
           {links?.map((link) => (
-            <div key={link.id} className={cn("flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3", !link.active && "opacity-60")}>
+            <div key={link.id} className={cn("flex flex-wrap items-center gap-3 border-t py-4", !link.active && "opacity-60")}>
               <div className="min-w-0 flex-1 basis-full sm:basis-0">
                 <p className="truncate font-mono text-xs">{link.url}</p>
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
@@ -120,16 +129,16 @@ export function ShareDialog({ albumId, open, onOpenChange }: { albumId: string; 
               </div>
               {link.active ? (
                 <>
-                  <Button variant="outline" size="sm" onClick={() => copy(link.url)} className="rounded-lg">
+                  <Button variant="outline" size="sm" onClick={() => copy(link.url)} className="min-h-11 rounded-lg">
                     <Copy />
                     {tc("copy")}
                   </Button>
                   <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
-                    className="rounded-lg"
+                    className="min-h-11 rounded-lg text-destructive hover:text-destructive"
                     onClick={async () => {
-                      const result = await revokeShareLink(link.id);
+                      const result = await revokeShareLink(link.id).catch(() => ({ ok: false as const, error: "network" }));
                       if (!result.ok) return fail(result.error);
                       toast.success(t("revoked"));
                       reload();

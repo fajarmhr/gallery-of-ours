@@ -125,6 +125,7 @@
     "haveAccount": "Already have an account?",
     "checkEmailTitle": "Check your email",
     "checkEmailText": "We sent a link to {email}. Open it to confirm your email, then a family admin will review your request.",
+    "checkEmailTextNoAddress": "Open the link in your email to confirm your address. A family admin will then review your request.",
     "forgotTitle": "Forgot your password?",
     "forgotLead": "Enter the email you signed up with and we'll send you a reset link.",
     "sendReset": "Send reset link",
@@ -505,7 +506,8 @@
     "emptyTitle": "No memories from this year",
     "emptyText": "Photos taken this year will show up here.",
     "storyIntro": "Our {year}",
-    "storyOutro": "Here's to the next year together"
+    "storyOutro": "Here's to the next year together",
+    "highlights": "Moments to remember"
   },
   "story": {
     "close": "Close story",
@@ -657,6 +659,8 @@
     "addMemories": "Add memories",
     "skipToContent": "Skip to content",
     "photoPreview": "Family photo",
-    "videoPreview": "Video · open to watch"
+    "videoPreview": "Video · open to watch",
+    "pageErrorTitle": "This page could not open",
+    "pageErrorText": "Please try again. If the problem continues, come back in a little while."
   }
 }

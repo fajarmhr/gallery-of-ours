@@ -26,13 +26,13 @@ export default async function PendingPage() {
           title={rejected ? t("rejectedTitle") : t("pendingTitle")}
           lead={rejected ? t("rejectedText") : t("pendingText")}
         />
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row">
           {!rejected ? (
-            <Button asChild className="h-11 rounded-lg px-5">
+            <Button asChild className="h-12 rounded-lg px-5 text-base">
               <Link href="/home">{t("checkAgain")}</Link>
             </Button>
           ) : null}
-          <SignOutButton label={t("signOut")} />
+          <SignOutButton label={t("signOut")} className="h-12 rounded-lg text-base" />
         </div>
       </AuthCard>
     </AuthShell>

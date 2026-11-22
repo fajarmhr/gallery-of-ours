@@ -1,15 +1,18 @@
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useMemo, useRef, useState } from "react";
 import MapGL, { Marker, NavigationControl, type MapRef } from "react-map-gl/maplibre";
 import Supercluster from "supercluster";
+import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import { mediaUrl } from "@/lib/format";
 import type { MapPoint } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import styles from "./places.module.css";
 
 export const MAP_STYLES = {
   light: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
@@ -34,6 +37,7 @@ export function PlacesMap({ points, selectedId }: { points: MapPoint[]; selected
   const t = useTranslations("location");
   const router = useRouter();
   const { resolvedTheme } = useTheme();
+  const reducedMotion = useReducedMotion();
   const mapRef = useRef<MapRef>(null);
   const [view, setView] = useState<{ bounds: Bounds; zoom: number } | null>(null);
 
@@ -79,7 +83,7 @@ export function PlacesMap({ points, selectedId }: { points: MapPoint[]; selected
   const dots = view ? index.getClusters(view.bounds, Math.floor(view.zoom)) : [];
 
   return (
-    <div className="h-[380px] overflow-hidden rounded-xl border bg-muted sm:h-[460px] lg:h-[540px]">
+    <div className={cn(styles.frame, "h-[320px] overflow-hidden rounded-xl border bg-muted sm:h-[420px] lg:h-[500px]")}>
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
@@ -105,23 +109,22 @@ export function PlacesMap({ points, selectedId }: { points: MapPoint[]; selected
               onClick={(event) => {
                 event.originalEvent.stopPropagation();
                 const zoom = clusterId !== null ? index.getClusterExpansionZoom(clusterId) : Number.POSITIVE_INFINITY;
-                if (zoom <= MAX_CLUSTER_ZOOM) mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 700 });
+                if (zoom <= MAX_CLUSTER_ZOOM) mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: reducedMotion ? 0 : 700 });
                 else router.push(`/places?p=${props.placeId}`, { scroll: false });
               }}
             >
-              <button type="button" aria-label={count > 1 ? t("mapStack", { count }) : t("mapPhoto")} className="group relative block cursor-pointer">
+              <button type="button" aria-label={count > 1 ? t("mapStack", { count }) : t("mapPhoto")} aria-pressed={props.selected} className="group relative block min-h-11 min-w-11 cursor-pointer rounded-sm">
                 <span
                   className={cn(
-                    "polaroid block -rotate-[4deg] p-1 pb-3 transition-transform duration-300 group-hover:scale-110",
-                    count > 1 ? "size-12 sm:size-14" : "size-10 sm:size-11",
-                    props.selected && "scale-115 ring-3 ring-primary",
+                    "polaroid block -rotate-1 p-1 pb-3 transition-transform duration-200 group-hover:-translate-y-0.5 motion-reduce:transform-none",
+                    count > 1 ? "size-14" : "size-12",
+                    props.selected && "ring-2 ring-primary",
                   )}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={mediaUrl(props.cover, "thumb")} alt="" className="size-full object-cover" />
+                  <ThumbhashImage src={mediaUrl(props.cover, "thumb")} className="size-full" />
                 </span>
                 {count > 1 ? (
-                  <span className="absolute -right-2 -top-2 rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-none text-primary-foreground tabular-nums">
+                  <span className="absolute -right-2 -top-2 rounded-md bg-primary px-1.5 py-0.5 text-xs font-medium leading-none text-primary-foreground tabular-nums">
                     {count}
                   </span>
                 ) : null}

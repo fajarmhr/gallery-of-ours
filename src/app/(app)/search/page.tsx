@@ -2,7 +2,7 @@ import { Search, SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { AlbumGrid } from "@/components/albums/album-grid";
-import { EmptyState, PageHeader } from "@/components/empty-state";
+import { EmptyState, PageHeader, PageSection } from "@/components/empty-state";
 import { MediaGallery } from "@/components/media/media-grid";
 import { searchMemories } from "@/lib/queries";
 import { requireActiveUser } from "@/lib/session";
@@ -20,12 +20,13 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   return (
     <>
       <PageHeader title={t("title")} subtitle={results ? t("results", { count: total, query }) : t("hint")} />
-      <form action="/search" className="mb-8 flex h-12 items-center gap-2 rounded-2xl border bg-card px-4 focus-within:ring-2 focus-within:ring-ring/40">
+      <form role="search" action="/search" className="mb-8 flex h-12 items-center gap-3 rounded-lg border bg-card px-4 focus-within:ring-2 focus-within:ring-ring/30">
         <Search className="size-5 shrink-0 text-muted-foreground" />
         <input
           name="q"
           defaultValue={query}
           placeholder={t("placeholder")}
+          aria-label={t("placeholder")}
           autoFocus={!query}
           className="h-full w-full min-w-0 bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />
@@ -34,17 +35,15 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
       {results && total === 0 ? <EmptyState icon={SearchX} title={t("emptyTitle")} text={t("emptyText")} /> : null}
 
       {results && results.albums.length > 0 ? (
-        <section className="mb-10">
-          <h2 className="mb-2 font-display text-2xl font-medium">{t("albums")}</h2>
+        <PageSection title={t("albums")} className="mb-10">
           <AlbumGrid albums={results.albums} />
-        </section>
+        </PageSection>
       ) : null}
 
       {results && results.media.length > 0 ? (
-        <section>
-          <h2 className="mb-3 font-display text-2xl font-medium">{t("photos")}</h2>
+        <PageSection title={t("photos")}>
           <MediaGallery groups={[{ key: `search-${query}`, items: results.media }]} />
-        </section>
+        </PageSection>
       ) : null}
     </>
   );

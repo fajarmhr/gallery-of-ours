@@ -4,7 +4,8 @@ import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { WaxSeal } from "@/components/polaroid";
+import { Dialog as DialogPrimitive } from "radix-ui";
+import { SealedEnvelope } from "@/components/polaroid";
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 const storageKey = (albumId: string) => `capsule-opened:${albumId}`;
@@ -20,8 +21,7 @@ function openedBefore(albumId: string) {
 }
 
 /**
- * The first visit to a time capsule after its day, once per device: a sealed envelope whose wax seal breaks when
- * tapped, then the album shows through.
+ * The first visit after a capsule opens, once per device: a quiet envelope reveal before the album.
  */
 export function CapsuleOpening({ albumId, title, note }: { albumId: string; title: string; note: string | null }) {
   const t = useTranslations("capsules");
@@ -53,49 +53,35 @@ export function CapsuleOpening({ albumId, title, note }: { albumId: string; titl
   if (!visible) return null;
 
   return createPortal(
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) breakSeal(); }}>
+      <DialogPrimitive.Content asChild aria-describedby={undefined}>
     <motion.div
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      onClick={breakSeal}
-      className="fixed inset-0 z-[70] grid place-items-center bg-[#1c120e]/95 px-6 text-center text-[#f2e9df]"
+      className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-background/98 px-[max(1.5rem,env(safe-area-inset-left))] py-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1.5rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center outline-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: breaking ? 0 : 1 }}
-      transition={breaking ? { delay: 1.5, duration: 0.6 } : { duration: 0.4 }}
+      transition={{ duration: 0.4, ease: EASE }}
       onAnimationComplete={() => {
         if (breaking) setPhase("done");
       }}
     >
-      <div className="flex flex-col items-center">
-        <p className="inline-block -rotate-2 font-hand text-3xl text-[#ffd3a8]">{t("openingNote")}</p>
-        <h2 className="mt-1 max-w-[18ch] text-balance font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{title}</h2>
-        {note ? <p className="mt-2 text-sm text-white/70">{note}</p> : null}
+      <div className="flex w-full max-w-lg flex-col items-center rounded-xl border bg-card px-6 py-8 sm:p-10">
+        <p className="text-sm font-medium text-primary">{t("openingNote")}</p>
+        <DialogPrimitive.Title className="mt-4 max-w-[20ch] break-words text-balance font-display text-3xl font-medium leading-tight tracking-tight sm:text-4xl">{title}</DialogPrimitive.Title>
+        {note ? <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{note}</p> : null}
 
-        <button type="button" aria-label={t("breakSeal")} className="mt-9 block w-64 max-w-[72vw] rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-[#ffd3a8]/60">
-          <span className="relative block aspect-[3/2] [perspective:900px]">
-            <span className="polaroid absolute inset-0 rounded-sm" />
-            <motion.span
-              className="absolute inset-x-0 top-0 h-[60%] origin-top bg-blank [clip-path:polygon(0_0,100%_0,50%_100%)]"
-              animate={{ rotateX: breaking ? 180 : 0 }}
-              transition={{ delay: 0.45, duration: 0.7, ease: EASE }}
-            />
-            {/* The seal cracks down the middle and both halves fall away. */}
-            {[-1, 1].map((side) => (
-              <motion.span
-                key={side}
-                className="absolute left-1/2 top-[60%] w-[30%] -translate-x-1/2 -translate-y-1/2"
-                style={{ clipPath: side < 0 ? "inset(0 50% 0 0)" : "inset(0 0 0 50%)" }}
-                animate={breaking ? { x: side * 44, y: 96, rotate: side * 38, opacity: 0 } : { rotate: [0, -5, 5, 0] }}
-                transition={breaking ? { duration: 0.8, ease: "easeIn" } : { duration: 0.6, repeat: Infinity, repeatDelay: 2.2 }}
-              >
-                <WaxSeal className="w-full" />
-              </motion.span>
-            ))}
-          </span>
+        <button type="button" onClick={breakSeal} disabled={breaking} aria-label={t("breakSeal")} className="mt-8 block w-52 max-w-full rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <motion.span className="block" animate={breaking ? { y: -8, opacity: 0 } : { y: 0, opacity: 1 }} transition={{ duration: 0.35, ease: EASE }}>
+            <SealedEnvelope />
+          </motion.span>
         </button>
-        <p className="mt-7 text-sm text-white/75">{t("breakSealHint")}</p>
+        <p className="mt-6 text-sm text-muted-foreground">{t("breakSealHint")}</p>
       </div>
-    </motion.div>,
+    </motion.div>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Root>,
     document.body,
   );
 }

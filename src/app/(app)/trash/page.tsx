@@ -19,9 +19,9 @@ export default async function TrashPage() {
   const empty = trash.albums.length === 0 && trash.media.length === 0;
 
   return (
-    <>
+    <div className="max-w-5xl">
       <PageHeader title={t("title")} subtitle={t("subtitle", { days: TRASH_DAYS })} />
       {empty ? <EmptyState icon={Trash2} title={t("emptyTitle")} text={t("emptyText")} /> : <TrashView albums={trash.albums} media={trash.media} />}
-    </>
+    </div>
   );
 }

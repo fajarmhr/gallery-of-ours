@@ -2,6 +2,7 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Map as MapIcon, Pause, Play } from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -25,12 +26,14 @@ export function GlobeView({
   focusSelected: boolean;
 }) {
   const t = useTranslations("globe");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const mapRef = useRef<MapRef>(null);
   const frameRef = useRef(0);
   const [loaded, setLoaded] = useState(false);
-  const [spinning, setSpinning] = useState(!focusSelected);
+  const [spinning, setSpinning] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -57,12 +60,28 @@ export function GlobeView({
     cancelAnimationFrame(frameRef.current);
     setSpinning(false);
     const map = mapRef.current;
-    map?.flyTo({ center: [place.lng, place.lat], zoom: Math.max(map.getZoom(), FOCUS_ZOOM), duration: 1800 });
+    map?.flyTo({ center: [place.lng, place.lat], zoom: Math.max(map.getZoom(), FOCUS_ZOOM), duration: reducedMotion ? 0 : 1200 });
     router.replace(`/globe?p=${place.id}`, { scroll: false });
   }
 
   return (
-    <div className="relative h-[65dvh] min-h-[380px] overflow-hidden rounded-xl border bg-[#0f0b09]">
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4 sm:px-5">
+        <p className="min-w-0 text-sm text-muted-foreground">{selected?.name ?? tc("items", { count: places.reduce((sum, place) => sum + place.count, 0) })}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" aria-pressed={spinning} onClick={() => setSpinning((s) => !s)} className="h-11 rounded-lg px-4">
+            {spinning ? <Pause /> : <Play />}
+            {spinning ? t("stop") : t("spin")}
+          </Button>
+          <Button asChild variant="ghost" className="h-11 rounded-lg px-4">
+            <Link href={selectedId ? `/places?p=${selectedId}` : "/places"}>
+              <MapIcon />
+              {t("flatMap")}
+            </Link>
+          </Button>
+        </div>
+      </div>
+      <div className="relative h-[min(60dvh,36rem)] min-h-72 bg-muted">
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
@@ -94,37 +113,18 @@ export function GlobeView({
               aria-label={place.name}
               aria-pressed={place.id === selectedId}
               title={`${place.name} · ${place.count}`}
-              className="relative grid cursor-pointer place-items-center"
+              className="relative grid size-11 cursor-pointer place-items-center rounded-full"
             >
-              <span className="absolute size-7 animate-ping rounded-full bg-primary/40" />
               <span
                 className={cn(
-                  "relative size-3.5 rounded-full border-2 border-white bg-primary shadow transition-all duration-300",
-                  place.id === selectedId && "size-5 ring-4 ring-white/50",
+                  "relative size-3.5 rounded-full border-2 border-white bg-primary transition-colors duration-200",
+                  place.id === selectedId && "ring-4 ring-primary/25",
                 )}
               />
             </button>
           </Marker>
         ))}
       </MapGL>
-
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-wrap items-start justify-between gap-3 p-4 sm:p-6">
-        <div className="text-white drop-shadow">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{t("title")}</h1>
-          <p className="text-sm text-white/85">{t("subtitle")}</p>
-        </div>
-        <div className="pointer-events-auto flex gap-2">
-          <Button variant="ghost" onClick={() => setSpinning((s) => !s)} className="glass h-10 rounded-xl px-4 text-white hover:bg-white/25 hover:text-white">
-            {spinning ? <Pause /> : <Play />}
-            {spinning ? t("stop") : t("spin")}
-          </Button>
-          <Button asChild variant="ghost" className="glass h-10 rounded-xl px-4 text-white hover:bg-white/25 hover:text-white">
-            <Link href={selectedId ? `/places?p=${selectedId}` : "/places"}>
-              <MapIcon />
-              {t("flatMap")}
-            </Link>
-          </Button>
-        </div>
       </div>
     </div>
   );

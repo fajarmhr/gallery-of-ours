@@ -43,7 +43,7 @@ export default async function AlbumPage({ params }: PageProps<"/albums/[albumId]
   const timeZone = env.timeZone;
 
   const back = (
-    <Link href="/albums" className="mb-4 inline-flex items-center gap-1.5 rounded-lg py-1 pr-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+    <Link href="/albums" className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-medium text-muted-foreground hover:text-foreground">
       <ArrowLeft className="size-4" />
       {t("title")}
     </Link>
@@ -54,12 +54,12 @@ export default async function AlbumPage({ params }: PageProps<"/albums/[albumId]
     return (
       <>
         {back}
-        <div className="flex flex-col items-center rounded-xl border border-dashed bg-card/60 px-6 py-14 text-center">
-          <SealedEnvelope className="mb-8 w-48 -rotate-3 sm:w-56" />
+        <div className="flex flex-col items-center rounded-xl border bg-card px-6 py-12 text-center sm:py-16">
+          <SealedEnvelope className="mb-8 w-40 -rotate-1 sm:w-48" />
           <h1 className="text-balance font-display text-3xl font-medium tracking-tight">{album.title}</h1>
-          <p className="mt-2 font-semibold">{t("lockedTitle", { date: format.dateTime(album.unlockAt!, { dateStyle: "long" }) })}</p>
+          <p className="mt-4 text-sm font-medium text-primary">{t("lockedTitle", { date: format.dateTime(album.unlockAt!, { dateStyle: "long" }) })}</p>
           <p className="mt-1 max-w-[46ch] text-pretty text-muted-foreground">{t("lockedText", { count: days })}</p>
-          {row.createdByName ? <p className="mt-4 inline-block -rotate-2 font-hand text-2xl text-note">{tcap("sealedBy", { name: row.createdByName })}</p> : null}
+          {row.createdByName ? <p className="mt-5 text-sm text-muted-foreground">{tcap("sealedBy", { name: row.createdByName })}</p> : null}
         </div>
       </>
     );

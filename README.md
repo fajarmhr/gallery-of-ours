@@ -4,6 +4,22 @@ A private family memories app: albums as polaroid piles, a justified photo grid,
 
 **Stack:** Node.js 26 LTS · pnpm 12 · Next.js 16.4 (App Router, Webpack) · React 19.3 · TypeScript 6 · Tailwind CSS 4.3 · shadcn/ui · Motion 14 · Better Auth · Neon Postgres + Drizzle · Cloudflare R2 · Resend · next-intl · MapLibre · Claude Haiku 4.5 (optional captions)
 
+## Interface consistency
+
+The shared theme lives in `src/app/globals.css`: warm paper surfaces, one clay accent, 8px controls and 12px panels. Use Newsreader at normal/medium weight for titles, the body font for controls, 16px body text and 14px labels/help. Full-screen photos and stories retain a warm dark viewing surface.
+
+Use `PageHeader`, `PageSection` and `EmptyState` for app pages; `PublicShell`, `FormHeading`, `Field` and `FormMessage` for public/auth flows. Dialogs, buttons, inputs and tabs come from `src/components/ui`. Avoid page-specific versions of those patterns.
+
+The consistency audit covers all 25 page routes plus shared loading, error and not-found states:
+
+| Area | Routes |
+| --- | --- |
+| Home and discovery | `/home`, `/search`, `/timeline`, `/favorites` |
+| Albums and memories | `/albums`, `/albums/[albumId]`, `/capsules`, `/milestones` |
+| Places and recaps | `/places`, `/globe`, `/recap`, `/recap/[year]` |
+| Family and preferences | `/family`, `/settings`, `/storage`, `/trash`, `/more` |
+| Public and access | `/`, `/sign-in`, `/sign-up`, `/forgot-password`, `/reset-password`, `/verify-email`, `/pending`, `/s/[token]` |
+
 ## Run it locally
 
 Use **pnpm 12.21.0** (`packageManager` pins it). On Windows, update an older pnpm installation with `npm.cmd install --global pnpm@12.21.0`; older pnpm launchers can fail when switching automatically to pnpm 12.
@@ -87,6 +103,7 @@ Scripts ending in `:prod` read `.env.production.local`; the others read `.env.lo
 | `pnpm dev` / `pnpm build` / `pnpm start` | Develop, build, run |
 | `pnpm typecheck` / `pnpm lint` | Type and lint checks |
 | `pnpm test:upload` | iPhone MIME, HEIC preparation, video fallback, and preview regression checks |
+| `pnpm test:recap` | Video-only years, photo preference, and unique bounded recap highlights |
 | `pnpm db:push` / `pnpm db:studio` | Sync the schema, browse the database |
 | `pnpm seed:demo` / `pnpm seed:remove` | Add or remove the demo family |
 | `pnpm create-superadmin` | Create or promote a superadmin |

@@ -51,8 +51,8 @@ export function LocationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl font-bold">{t("title")}</DialogTitle>
-          <DialogDescription>{target.kind === "album" ? t("albumHint") : t("mediaHint")}</DialogDescription>
+          <DialogTitle className="font-display text-2xl font-medium tracking-tight">{t("title")}</DialogTitle>
+          <DialogDescription className="text-base leading-relaxed">{target.kind === "album" ? t("albumHint") : t("mediaHint")}</DialogDescription>
         </DialogHeader>
         {/* Radix unmounts the content when the dialog closes, so every opening starts with a fresh form. */}
         <LocationForm
@@ -244,22 +244,22 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
   return (
     <>
       {own || fallback ? (
-        <p className="flex items-start gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
-          <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+        <p className="flex items-start gap-3 rounded-lg border bg-muted/40 p-4 text-base leading-relaxed">
+          <MapPin className="mt-1 size-4 shrink-0 text-primary" />
           <span className="min-w-0">
-            <span className={cn("block", own ? "font-semibold" : "text-muted-foreground")}>
+            <span className={cn("block [overflow-wrap:anywhere]", own ? "font-medium" : "text-muted-foreground")}>
               {own ? t("now", { name: own.name }) : t("usesAlbum", { name: fallback!.name })}
             </span>
-            {(own ?? fallback)!.detail ? <span className="block text-xs text-muted-foreground">{(own ?? fallback)!.detail}</span> : null}
+            {(own ?? fallback)!.detail ? <span className="mt-1 block text-sm text-muted-foreground">{(own ?? fallback)!.detail}</span> : null}
           </span>
         </p>
       ) : null}
       {usage && usage.total > 0 ? (
-        <p className="-mt-2 px-1 text-xs text-muted-foreground">{t("albumUsage", { inherited: usage.inherited, total: usage.total })}</p>
+        <p className="-mt-2 px-1 text-sm leading-relaxed text-muted-foreground">{t("albumUsage", { inherited: usage.inherited, total: usage.total })}</p>
       ) : null}
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="location-search" className="text-sm font-semibold">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="location-search" className="text-sm font-medium">
           {t("search")}
         </label>
         <div className="relative">
@@ -270,7 +270,7 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder={t("searchPlaceholder")}
-            className="h-11 rounded-xl pl-9 pr-9"
+            className="h-12 rounded-lg pl-10 pr-10"
           />
           {busy === "search" || busy === "resolve" ? (
             <LoaderCircle className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -279,34 +279,34 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
 
         {results ? (
           results.length ? (
-            <ul className="max-h-56 overflow-y-auto overscroll-contain rounded-xl border bg-card p-1">
+            <ul className="max-h-56 overflow-y-auto overscroll-contain rounded-lg border bg-card p-1">
               {results.map((result) => (
                 <li key={result.id}>
                   <button
                     type="button"
                     onClick={() => chooseResult(result)}
-                    className="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left hover:bg-muted"
+                    className="flex min-h-12 w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted"
                   >
                     <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{result.name}</span>
-                      {result.detail ? <span className="block truncate text-xs text-muted-foreground">{result.detail}</span> : null}
+                      <span className="block text-base font-medium [overflow-wrap:anywhere]">{result.name}</span>
+                      {result.detail ? <span className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{result.detail}</span> : null}
                     </span>
                   </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="px-1 text-sm text-muted-foreground">{t("noResults")}</p>
+            <p className="px-1 text-base leading-relaxed text-muted-foreground">{t("noResults")}</p>
           )
         ) : null}
 
         {spot ? (
-          <p className="flex items-center gap-2 rounded-xl bg-accent px-3 py-2 text-sm text-accent-foreground">
+          <p className="flex items-center gap-3 rounded-lg border border-primary/15 bg-accent/60 p-4 text-base text-accent-foreground">
             <MapPin className="size-4 shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{spot.name}</span>
-              <span className="block truncate text-xs opacity-80">
+              <span className="block truncate font-medium">{spot.name}</span>
+              <span className="mt-1 block text-sm leading-relaxed opacity-80">
                 {spot.inIndonesia ? t("exactSpot") : t("outsideIndonesia", { country: spot.country ?? "" })}
               </span>
             </span>
@@ -317,7 +317,7 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
                 setSpot(null);
                 setQuery("");
               }}
-              className="grid size-8 shrink-0 place-items-center rounded-lg hover:bg-foreground/10"
+              className="grid size-11 shrink-0 place-items-center rounded-lg transition-colors hover:bg-foreground/10"
             >
               <X className="size-4" />
             </button>
@@ -326,9 +326,9 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
       </div>
 
       {!spot || spot.inIndonesia ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <span className="text-sm font-semibold">{spot ? t("checkArea") : t("orChoose")}</span>
+            <span className="text-sm font-medium">{spot ? t("checkArea") : t("orChoose")}</span>
             <span className="text-xs text-muted-foreground">{t("indonesia")}</span>
           </div>
           {LEVELS.map((level, index) => (
@@ -347,22 +347,22 @@ function LocationForm({ target, onDone }: { target: LocationTarget; onDone: () =
       ) : null}
 
       {withOwnLocation > 0 ? (
-        <div className="flex items-start gap-3 rounded-xl border px-3 py-2.5">
+        <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
           <Checkbox id="location-replace-own" checked={replaceOwn} onCheckedChange={(checked) => setReplaceOwn(checked === true)} className="mt-0.5" />
-          <label htmlFor="location-replace-own" className="text-sm leading-snug">
+          <label htmlFor="location-replace-own" className="text-base leading-relaxed">
             {t("replaceOwn", { count: withOwnLocation })}
-            <span className="mt-0.5 block text-xs text-muted-foreground">{t("replaceOwnHint")}</span>
+            <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{t("replaceOwnHint")}</span>
           </label>
         </div>
       ) : null}
 
       <DialogFooter>
         {own ? (
-          <Button variant="ghost" onClick={remove} disabled={busy === "save"} className="text-destructive hover:text-destructive sm:mr-auto">
+          <Button variant="ghost" onClick={remove} disabled={busy === "save"} className="h-11 rounded-lg text-destructive hover:text-destructive sm:mr-auto">
             {t("remove")}
           </Button>
         ) : null}
-        <Button onClick={save} disabled={!canSave || busy === "save" || busy === "resolve"} className="min-w-24">
+        <Button onClick={save} disabled={!canSave || busy === "save" || busy === "resolve"} className="h-11 min-w-24 rounded-lg">
           {busy === "save" ? tc("saving") : tc("save")}
         </Button>
       </DialogFooter>
@@ -404,31 +404,31 @@ function RegionSelect({
   };
 
   return (
-    <div className={cn("rounded-xl border bg-background", disabled && "opacity-50")}>
+    <div className={cn("rounded-lg border bg-card", disabled && "opacity-50")}>
       <button
         type="button"
         disabled={disabled}
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
-        className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left"
+        className="flex min-h-12 w-full items-center gap-3 px-3 py-3 text-left"
       >
-        <span className="w-24 shrink-0 text-xs font-bold leading-tight text-muted-foreground sm:w-28">
+        <span className="w-24 shrink-0 text-sm font-medium leading-tight text-muted-foreground sm:w-28">
           {label}
-          {optional ? <span className="block font-normal">{tc("optional")}</span> : null}
+          {optional ? <span className="mt-0.5 block text-xs font-normal">{tc("optional")}</span> : null}
         </span>
-        <span className={cn("min-w-0 flex-1 truncate text-sm", value ? "font-semibold" : "text-muted-foreground")}>{value?.name ?? t("choose")}</span>
+        <span className={cn("min-w-0 flex-1 truncate text-base", value ? "font-medium" : "text-muted-foreground")}>{value?.name ?? t("choose")}</span>
         <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
 
       {open ? (
         <div className="border-t p-2">
           {options.length > 8 ? (
-            <Input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder={t("filter")} aria-label={t("filter")} className="mb-2 h-9 rounded-lg" />
+            <Input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder={t("filter")} aria-label={t("filter")} className="mb-2 h-11 rounded-lg" />
           ) : null}
           <ul className="max-h-56 overflow-y-auto overscroll-contain">
             {optional && value ? (
               <li>
-                <button type="button" onClick={() => select(null)} className="w-full rounded-lg px-2 py-2 text-left text-sm text-muted-foreground hover:bg-muted">
+                <button type="button" onClick={() => select(null)} className="min-h-11 w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted">
                   {t("clearLevel")}
                 </button>
               </li>
@@ -439,8 +439,8 @@ function RegionSelect({
                   type="button"
                   onClick={() => select(option)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted",
-                    option.code === value?.code && "font-semibold",
+                    "flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-base transition-colors hover:bg-muted",
+                    option.code === value?.code && "bg-muted/50 font-medium",
                   )}
                 >
                   {option.name}
@@ -495,11 +495,11 @@ function HamletField({ pick, value, onChange }: { pick: RegionPick; value: strin
     .slice(0, 12);
 
   return (
-    <div className={cn("rounded-xl border bg-background focus-within:ring-2 focus-within:ring-ring/50", !area && "opacity-50")}>
-      <label className="flex min-h-11 w-full items-center gap-3 px-3 py-2">
-        <span className="w-24 shrink-0 text-xs font-bold leading-tight text-muted-foreground sm:w-28">
+    <div className={cn("rounded-lg border bg-card focus-within:ring-2 focus-within:ring-ring/50", !area && "opacity-50")}>
+      <label className="flex min-h-12 w-full items-center gap-3 px-3 py-3">
+        <span className="w-24 shrink-0 text-sm font-medium leading-tight text-muted-foreground sm:w-28">
           {t("hamlet")}
-          <span className="block font-normal">{tc("optional")}</span>
+          <span className="mt-0.5 block text-xs font-normal">{tc("optional")}</span>
         </span>
         <input
           value={value}
@@ -508,16 +508,16 @@ function HamletField({ pick, value, onChange }: { pick: RegionPick; value: strin
           autoComplete="off"
           onChange={(event) => onChange(event.target.value)}
           placeholder={t("hamletPlaceholder")}
-          className="min-w-0 flex-1 bg-transparent text-base font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground sm:text-sm"
+          className="min-w-0 flex-1 bg-transparent text-base font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground"
         />
         {area && !suggestions ? <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" /> : null}
       </label>
       {area && shown.length > 0 ? (
         <div className="border-t p-2">
-          <p className="mb-1.5 px-1 text-xs text-muted-foreground">{t("hamletSuggestions")}</p>
-          <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto overscroll-contain">
+          <p className="mb-2 px-1 text-sm text-muted-foreground">{t("hamletSuggestions")}</p>
+          <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto overscroll-contain">
             {shown.map((name) => (
-              <button key={name} type="button" onClick={() => onChange(name)} className="rounded-full border px-2.5 py-1 text-xs font-semibold hover:bg-muted">
+              <button key={name} type="button" onClick={() => onChange(name)} className="min-h-11 max-w-full rounded-lg border px-3 py-2 text-sm font-medium transition-colors [overflow-wrap:anywhere] hover:bg-muted">
                 {name}
               </button>
             ))}

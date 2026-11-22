@@ -7,18 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { fieldClass } from "./sign-in-form";
-import { Field } from "./sign-up-form";
-
-export function AuthHeadingClient({ title, lead, icon }: { title: string; lead?: string; icon?: React.ReactNode }) {
-  return (
-    <div className="mb-2">
-      {icon ? <span className="mb-5 grid size-12 place-items-center rounded-lg bg-accent text-accent-foreground">{icon}</span> : null}
-      <h1 className="text-balance font-display text-[2.4rem] font-normal leading-[1.12] tracking-[-0.025em]">{title}</h1>
-      {lead ? <p className="mt-3 text-pretty text-base leading-relaxed text-muted-foreground">{lead}</p> : null}
-    </div>
-  );
-}
+import { Field, FormHeading, FormMessage, fieldClass } from "./auth-presentation";
 
 export function ForgotForm() {
   const t = useTranslations("auth");
@@ -48,8 +37,8 @@ export function ForgotForm() {
   if (sent) {
     return (
       <div className="flex flex-col gap-5">
-        <AuthHeadingClient icon={<MailCheck className="size-7" />} title={t("resetSentTitle")} lead={t("resetSentText")} />
-        <Button asChild variant="outline" className="h-12 rounded-lg">
+        <FormHeading icon={<MailCheck />} title={t("resetSentTitle")} lead={t("resetSentText")} />
+        <Button asChild variant="outline" className="h-12 rounded-lg text-base">
           <Link href="/sign-in">{t("backToSignIn")}</Link>
         </Button>
       </div>
@@ -58,15 +47,15 @@ export function ForgotForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={pending}>
-      <AuthHeadingClient title={t("forgotTitle")} lead={t("forgotLead")} />
+      <FormHeading title={t("forgotTitle")} lead={t("forgotLead")} />
       <Field id="email" label={t("email")}>
         <Input id="email" type="email" inputMode="email" autoCapitalize="none" spellCheck={false} required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={fieldClass} />
       </Field>
-      {error ? <p role="alert" className="text-sm font-medium text-destructive">{error}</p> : null}
+      {error ? <FormMessage error>{error}</FormMessage> : null}
       <Button type="submit" disabled={pending} className="h-12 rounded-lg text-base">
         {pending ? t("sending") : t("sendReset")}
       </Button>
-      <Link href="/sign-in" className="text-center text-sm font-semibold text-accent-foreground hover:underline">
+      <Link href="/sign-in" className="inline-flex min-h-11 items-center justify-center rounded-sm border-t pt-5 text-center text-sm font-medium text-primary underline-offset-4 hover:underline">
         {t("backToSignIn")}
       </Link>
     </form>

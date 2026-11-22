@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { deleteForever, restoreFromTrash } from "@/actions/trash";
+import { PageSection } from "@/components/empty-state";
 import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import {
   AlertDialog,
@@ -62,37 +63,35 @@ export function TrashView({ albums, media }: { albums: TrashAlbum[]; media: Tras
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-16">
+    <div className="flex flex-col gap-10 pb-24">
       {albums.length > 0 ? (
-        <section>
-          <h2 className="mb-3 font-display text-2xl font-medium">{t("albums")}</h2>
+        <PageSection title={t("albums")}>
           <ul className="divide-y rounded-xl border bg-card">
             {albums.map((album) => (
-              <li key={album.id} className="flex flex-wrap items-center gap-3 p-4">
+              <li key={album.id} className="flex flex-wrap items-center gap-3 p-5 sm:p-6">
                 <div className="min-w-0 flex-1 basis-full sm:basis-0">
-                  <p className="font-semibold [overflow-wrap:anywhere]">{album.title}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-base font-medium [overflow-wrap:anywhere]">{album.title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {tc("items", { count: album.itemCount })} · {t("daysLeft", { count: daysLeft(album.deletedAt) })}
                   </p>
                 </div>
-                <Button variant="outline" onClick={() => restore({ albumIds: [album.id] })} className="h-9 rounded-lg">
+                <Button variant="outline" onClick={() => restore({ albumIds: [album.id] })} className="h-11 rounded-lg">
                   <RotateCcw />
                   {t("restore")}
                 </Button>
-                <Button variant="destructive" onClick={() => setConfirm({ albumIds: [album.id] })} className="h-9 rounded-lg">
+                <Button variant="destructive" onClick={() => setConfirm({ albumIds: [album.id] })} className="h-11 rounded-lg">
                   <Trash2 />
                   {t("deleteForever")}
                 </Button>
               </li>
             ))}
           </ul>
-        </section>
+        </PageSection>
       ) : null}
 
       {media.length > 0 ? (
-        <section>
-          <h2 className="mb-3 font-display text-2xl font-medium">{t("items")}</h2>
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-7">
+        <PageSection title={t("items")}>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
             {media.map((item) => {
               const isSelected = selected.has(item.id);
               return (
@@ -102,34 +101,37 @@ export function TrashView({ albums, media }: { albums: TrashAlbum[]; media: Tras
                   aria-pressed={isSelected}
                   aria-label={`${item.albumTitle} · ${t("daysLeft", { count: daysLeft(item.deletedAt) })}`}
                   onClick={() => toggle(item.id)}
-                  className={cn("group relative aspect-square overflow-hidden rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring", isSelected && "ring-3 ring-primary")}
+                  className={cn("group min-w-0 overflow-hidden rounded-xl border bg-card text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring", isSelected ? "border-primary ring-2 ring-primary" : "hover:border-primary/40")}
                 >
-                  <ThumbhashImage src={mediaUrl(item.id, "thumb")} thumbhash={item.thumbhash} className="h-full w-full" imgClassName={cn(isSelected && "scale-95 opacity-80")} />
-                  {item.type === "video" ? <Play className="absolute left-1.5 top-1.5 size-4 fill-white text-white drop-shadow" /> : null}
-                  <span className={cn("absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-full border-2 border-white text-white", isSelected ? "bg-primary" : "bg-black/20")}>
-                    {isSelected ? <Check className="size-3" /> : null}
+                  <span className="relative block aspect-square overflow-hidden bg-muted">
+                    <ThumbhashImage src={mediaUrl(item.id, "thumb")} thumbhash={item.thumbhash} className="h-full w-full" imgClassName={cn(isSelected && "opacity-80")} />
+                    {item.type === "video" ? <Play className="absolute left-3 top-3 size-5 fill-white text-white drop-shadow" /> : null}
+                    <span className={cn("absolute right-3 top-3 grid size-6 place-items-center rounded-md border border-white/90 text-white", isSelected ? "bg-primary" : "bg-black/20")}>
+                      {isSelected ? <Check className="size-4" /> : null}
+                    </span>
                   </span>
-                  <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-1.5 pb-1 pt-4 text-left text-[10px] font-semibold text-white">
-                    {t("daysLeft", { count: daysLeft(item.deletedAt) })}
+                  <span className="block p-3">
+                    <span className="block truncate text-sm font-medium">{item.albumTitle}</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{t("daysLeft", { count: daysLeft(item.deletedAt) })}</span>
                   </span>
                 </button>
               );
             })}
           </div>
-        </section>
+        </PageSection>
       ) : null}
 
       {selected.size > 0 ? (
-        <div className="fixed inset-x-3 bottom-24 z-40 mx-auto flex max-w-xl flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-[0_2px_8px_rgb(70_45_25/0.04)] lg:bottom-6">
-          <span className="mr-auto text-sm font-semibold">{tc("selected", { count: selected.size })}</span>
-          <Button variant="ghost" onClick={() => setSelected(new Set())} className="h-9 rounded-lg">
+        <div role="region" aria-label={tc("selected", { count: selected.size })} className="fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-2xl flex-wrap items-center gap-2 rounded-xl border bg-card p-4 shadow-[0_2px_8px_rgb(70_45_25/0.04)] lg:bottom-6">
+          <span className="mr-auto text-sm font-medium">{tc("selected", { count: selected.size })}</span>
+          <Button variant="ghost" onClick={() => setSelected(new Set())} className="h-11 rounded-lg">
             {tc("clearSelection")}
           </Button>
-          <Button variant="outline" onClick={() => restore({ mediaIds: [...selected] })} className="h-9 rounded-lg">
+          <Button variant="outline" onClick={() => restore({ mediaIds: [...selected] })} className="h-11 rounded-lg">
             <RotateCcw />
             {t("restore")}
           </Button>
-          <Button variant="destructive" onClick={() => setConfirm({ mediaIds: [...selected] })} className="h-9 rounded-lg">
+          <Button variant="destructive" onClick={() => setConfirm({ mediaIds: [...selected] })} className="h-11 rounded-lg">
             <Trash2 />
             {t("deleteForever")}
           </Button>

@@ -1,12 +1,13 @@
 import { Hourglass, ImageIcon, Lock } from "lucide-react";
+import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import { cn } from "@/lib/utils";
 
 const SPRING = "transition-transform duration-500 ease-[cubic-bezier(.2,.8,.2,1)]";
 
 const PILE_POSES = [
-  "-rotate-[5deg] group-hover:-translate-x-[4%] group-hover:-rotate-[7deg] motion-reduce:transform-none",
-  "rotate-[4deg] group-hover:translate-x-[4%] group-hover:rotate-[6deg] motion-reduce:transform-none",
-  "-rotate-[1deg] group-hover:-translate-y-[2%] group-hover:rotate-0 motion-reduce:transform-none",
+  "-rotate-[3deg] group-hover:-translate-x-[2%] group-hover:-rotate-[4deg] group-focus-visible:-rotate-[4deg] motion-reduce:transform-none",
+  "rotate-[2deg] group-hover:translate-x-[2%] group-hover:rotate-[3deg] group-focus-visible:rotate-[3deg] motion-reduce:transform-none",
+  "-rotate-[.5deg] group-hover:-translate-y-[1%] group-hover:rotate-0 group-focus-visible:rotate-0 motion-reduce:transform-none",
 ];
 
 /**
@@ -22,10 +23,9 @@ export function AlbumPile({ covers, locked, sealed, className }: { covers: strin
           {locked ? (
             <span className="block h-full w-full bg-blank" />
           ) : src ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            <ThumbhashImage src={src} className="h-full w-full" />
           ) : (
-            <span className="grid h-full w-full place-items-center bg-blank text-[#a08e7a]">
+            <span className="grid h-full w-full place-items-center bg-blank text-muted-foreground">
               <ImageIcon className="size-6" />
             </span>
           )}
@@ -69,18 +69,18 @@ export function SealedEnvelope({ className }: { className?: string }) {
 /** Empty prints with locks: the visitor page shows no family photos at all. */
 export function BlankPolaroids({ captions, className }: { captions: [string, string, string]; className?: string }) {
   const layout = [
-    "left-[4%] top-[6%] -rotate-[9deg]",
-    "left-[40%] top-0 rotate-[6deg]",
-    "left-[20%] top-[34%] -rotate-[2deg]",
+    "left-[4%] top-[6%] -rotate-[6deg]",
+    "left-[40%] top-0 rotate-[4deg]",
+    "left-[20%] top-[34%] -rotate-[1deg]",
   ];
   return (
     <div className={cn("relative mx-auto w-full max-w-[460px]", className)} aria-hidden="true">
       {captions.map((caption, i) => (
         <div key={caption} className={cn("polaroid absolute flex w-[42%] flex-col p-[3%] pb-0", layout[i])}>
-          <div className="grid aspect-[4/4.2] place-items-center bg-blank text-[#a08e7a]">
+          <div className="grid aspect-[4/4.2] place-items-center bg-blank text-muted-foreground">
             <Lock className="size-7" />
           </div>
-          <p className="py-[7%] text-center font-hand text-lg font-bold text-[#5e4a3a] sm:text-xl">{caption}</p>
+          <p className="py-[7%] text-center font-display text-lg font-medium text-foreground sm:text-xl">{caption}</p>
         </div>
       ))}
     </div>

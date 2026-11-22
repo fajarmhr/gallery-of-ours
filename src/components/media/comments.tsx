@@ -124,13 +124,13 @@ export function SocialPanel({
   return (
     <div className="flex min-h-full min-w-0 flex-col">
       <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b bg-card px-[max(1rem,env(safe-area-inset-left))] py-2 pr-[max(1rem,env(safe-area-inset-right))] lg:pt-[max(.5rem,env(safe-area-inset-top))]">
-        <p className="font-display text-lg font-bold">{t("info")}</p>
+        <h2 className="font-display text-2xl font-medium leading-tight">{t("info")}</h2>
         <button type="button" onClick={onClose} aria-label={tc("close")} className="grid size-11 shrink-0 place-items-center rounded-lg hover:bg-foreground/5">
           <X className="size-5" />
         </button>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-5 px-[max(1rem,env(safe-area-inset-left))] py-4 pr-[max(1rem,env(safe-area-inset-right))]">
+      <div className="flex min-w-0 flex-col gap-6 px-[max(1rem,env(safe-area-inset-left))] py-5 pr-[max(1rem,env(safe-area-inset-right))]">
         {loadError ? (
           <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-muted p-3 text-sm">
             <p className="flex-1">{te("network")}</p>
@@ -152,7 +152,7 @@ export function SocialPanel({
             </div>
           ) : (
             <div className="flex items-start gap-2">
-              <p className={cn("min-w-0 flex-1 break-words font-display text-xl font-bold leading-snug", !item.caption && "text-muted-foreground")}>
+              <p className={cn("min-w-0 flex-1 break-words font-display text-2xl font-medium leading-snug", !item.caption && "text-muted-foreground")}>
                 {item.caption ?? (social?.canEdit ? t("addCaption") : "")}
               </p>
               {social?.canEdit ? (
@@ -192,7 +192,7 @@ export function SocialPanel({
                   aria-label={t(`reactions.${reaction.kind}`)}
                   disabled={reacting}
                   className={cn(
-                    "relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border px-3 text-sm font-semibold transition-colors disabled:opacity-60",
+                    "relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg border px-3 text-sm font-medium transition-colors disabled:opacity-60",
                     reaction.mine ? "border-primary bg-accent text-accent-foreground" : "bg-background hover:bg-foreground/5",
                   )}
                 >
@@ -218,18 +218,18 @@ export function SocialPanel({
         </section>
 
         <section className="flex flex-col gap-3">
-          <h3 className="font-display text-base font-bold">{t("comments")}</h3>
+          <h3 className="font-display text-xl font-medium">{t("comments")}</h3>
           {social && social.comments.length === 0 ? <p className="text-sm text-muted-foreground">{t("noComments")}</p> : null}
           <ul className="flex flex-col gap-3">
             {social?.comments.map((c) => (
               <li key={c.id} className="group flex gap-2.5">
                 <UserAvatar name={c.name} image={c.image} className="size-8" />
-                <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm bg-muted px-3 py-2">
+                <div className="min-w-0 flex-1 rounded-xl rounded-tl-sm bg-muted px-3 py-2">
                   <p className="text-xs">
                     <span className="font-bold">{c.name}</span>{" "}
                     <span className="text-muted-foreground">{format.relativeTime(new Date(c.createdAt), new Date(social.now))}</span>
                   </p>
-                  <p className="whitespace-pre-wrap break-words text-sm">{c.body}</p>
+                  <p className="whitespace-pre-wrap break-words text-base leading-relaxed">{c.body}</p>
                 </div>
                 {c.canDelete ? (
                   <button

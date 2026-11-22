@@ -97,7 +97,7 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label={heading}
-      className="fixed inset-x-0 top-0 z-[70] h-dvh overflow-hidden bg-[#0f0b09] text-[#f2e9df] outline-none"
+      className="fixed inset-x-0 top-0 z-[70] h-dvh overflow-hidden bg-[#211e1b] text-[#f2e9df] outline-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -124,7 +124,7 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
               transition={{ duration: 7, ease: "linear" }}
             />
           ) : (
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,#4a2e22,transparent_60%),radial-gradient(circle_at_80%_90%,#2e3120,transparent_55%)]" />
+            <div className="absolute inset-0 bg-[#342e28]" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0f0b09]/90 via-[#0f0b09]/10 to-[#0f0b09]/55" />
         </motion.div>
@@ -162,7 +162,7 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
             {musicOn ? t("musicOn") : t("musicOff")}
           </button>
         ) : null}
-        <button type="button" onClick={onClose} aria-label={t("close")} className="grid size-11 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+        <button type="button" onClick={onClose} aria-label={t("close")} className="grid size-11 shrink-0 place-items-center rounded-lg bg-white/10 hover:bg-white/20">
           <X className="size-5" />
         </button>
       </div>
@@ -190,12 +190,12 @@ function StoryOverlay({ slides, heading, musicUrl, onClose }: Props) {
           }}
         >
           <div className={cn("flex min-h-full flex-col", slide.image ? "justify-end" : "justify-center text-center")}>
-          {slide.note ? <p className="mb-1 inline-block -rotate-2 font-hand text-3xl text-[#ffd3a8]">{slide.note}</p> : null}
-          {slide.stamp ? <p className="date-stamp mb-2 text-lg">{slide.stamp}</p> : null}
+          {slide.note ? <p className="mb-3 text-sm font-medium tracking-wide text-[#f0c8a6]">{slide.note}</p> : null}
+          {slide.stamp ? <p className="date-stamp mb-3 text-sm">{slide.stamp}</p> : null}
           <h2
             className={cn(
-              "shrink-0 break-words text-balance font-display font-extrabold leading-[0.98] tracking-tight",
-              slide.image ? "max-w-[18ch] text-4xl sm:text-6xl landscape:text-3xl landscape:sm:text-4xl" : "mx-auto max-w-[16ch] text-5xl sm:text-7xl landscape:text-3xl landscape:sm:text-4xl",
+              "shrink-0 break-words text-balance font-display font-normal leading-[0.98] tracking-tight",
+              slide.image ? "max-w-[18ch] text-4xl sm:text-5xl landscape:text-3xl landscape:sm:text-4xl" : "mx-auto max-w-[16ch] text-4xl sm:text-6xl landscape:text-3xl landscape:sm:text-4xl",
             )}
           >
             {slide.title}
@@ -229,7 +229,7 @@ function StoryControl({ label, onClick, children, disabled }: { label: string; o
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="grid size-12 place-items-center rounded-full border border-white/25 bg-white/10 backdrop-blur hover:bg-white/20 disabled:opacity-40 [&_svg]:size-5"
+      className="grid size-12 place-items-center rounded-lg border border-white/25 bg-white/10 backdrop-blur hover:bg-white/20 disabled:opacity-40 [&_svg]:size-5"
     >
       {children}
     </button>
@@ -260,7 +260,7 @@ export function StoryButton({
         type="button"
         variant={variant === "glass" ? "ghost" : variant}
         onClick={() => setOpen(true)}
-        className={cn("h-10 rounded-xl px-4", variant === "glass" && "glass text-white hover:bg-white/25 hover:text-white", className)}
+        className={cn("h-11 rounded-lg px-4", variant === "glass" && "glass text-white hover:bg-white/25 hover:text-white", className)}
       >
         <Play className="fill-current" />
         {label}

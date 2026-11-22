@@ -55,6 +55,7 @@ export function AlbumFormDialog({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     const payload: AlbumInputValues = {
       title: values.title,
@@ -65,7 +66,7 @@ export function AlbumFormDialog({
       endDate: values.endDate || null,
       unlockAt: canSeal ? values.unlockAt || null : undefined,
     };
-    const result = albumId ? await updateAlbum(albumId, payload) : await createAlbum(payload);
+    const result = await (albumId ? updateAlbum(albumId, payload) : createAlbum(payload)).catch(() => ({ ok: false as const, error: "network" }));
     setPending(false);
     if (!result.ok) {
       toast.error(te.has(result.error) ? te(result.error) : te("unknown"));
@@ -92,24 +93,24 @@ export function AlbumFormDialog({
     >
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
-        <form onSubmit={submit} className="flex flex-col gap-4">
+        <form onSubmit={submit} className="flex flex-col gap-5">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl font-extrabold tracking-tight">{albumId ? t("editTitle") : t("createTitle")}</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-medium tracking-tight">{albumId ? t("editTitle") : t("createTitle")}</DialogTitle>
             {capsule ? <DialogDescription>{t("capsuleHint")}</DialogDescription> : null}
           </DialogHeader>
 
           <FormField id="title" label={t("fieldTitle")}>
-            <Input id="title" required maxLength={120} value={values.title} placeholder={t("fieldTitlePlaceholder")} onChange={(e) => set("title", e.target.value)} className="h-11 rounded-xl" />
+            <Input id="title" required maxLength={120} value={values.title} placeholder={t("fieldTitlePlaceholder")} onChange={(e) => set("title", e.target.value)} className="h-11 rounded-lg" />
           </FormField>
           <FormField id="note" label={t("fieldNote")}>
-            <Input id="note" maxLength={80} value={values.note} placeholder={t("fieldNotePlaceholder")} onChange={(e) => set("note", e.target.value)} className="h-11 rounded-xl font-hand text-xl" />
+            <Input id="note" maxLength={80} value={values.note} placeholder={t("fieldNotePlaceholder")} onChange={(e) => set("note", e.target.value)} className="h-11 rounded-lg" />
           </FormField>
           <FormField id="description" label={t("fieldDescription")}>
-            <Textarea id="description" maxLength={1000} rows={3} value={values.description} placeholder={t("fieldDescriptionPlaceholder")} onChange={(e) => set("description", e.target.value)} />
+            <Textarea id="description" maxLength={1000} rows={3} value={values.description} placeholder={t("fieldDescriptionPlaceholder")} onChange={(e) => set("description", e.target.value)} className="rounded-lg text-base" />
           </FormField>
           <FormField id="category" label={t("fieldCategory")}>
             <Select value={values.category} onValueChange={(v) => set("category", v as AlbumValues["category"])}>
-              <SelectTrigger id="category" className="h-11 w-full rounded-xl">
+              <SelectTrigger id="category" className="h-11 w-full rounded-lg">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -121,25 +122,25 @@ export function AlbumFormDialog({
               </SelectContent>
             </Select>
           </FormField>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 rounded-xl border bg-muted/35 p-4 sm:grid-cols-2">
             <FormField id="startDate" label={t("fieldStart")}>
-              <Input id="startDate" type="date" value={values.startDate} onChange={(e) => set("startDate", e.target.value)} className="h-11 rounded-xl" />
+              <Input id="startDate" type="date" value={values.startDate} onChange={(e) => set("startDate", e.target.value)} className="h-11 rounded-lg" />
             </FormField>
             <FormField id="endDate" label={t("fieldEnd")}>
-              <Input id="endDate" type="date" min={values.startDate || undefined} value={values.endDate} onChange={(e) => set("endDate", e.target.value)} className="h-11 rounded-xl" />
+              <Input id="endDate" type="date" min={values.startDate || undefined} value={values.endDate} onChange={(e) => set("endDate", e.target.value)} className="h-11 rounded-lg" />
             </FormField>
           </div>
           {canSeal ? (
             <FormField id="unlockAt" label={t("fieldCapsule")} hint={capsule ? undefined : t("capsuleHint")}>
-              <Input id="unlockAt" type="date" min={tomorrow} required={capsule} value={values.unlockAt} onChange={(e) => set("unlockAt", e.target.value)} className="h-11 rounded-xl" />
+              <Input id="unlockAt" type="date" min={tomorrow} required={capsule} value={values.unlockAt} onChange={(e) => set("unlockAt", e.target.value)} className="h-11 rounded-lg" />
             </FormField>
           ) : null}
 
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="h-10 rounded-xl">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="h-11 rounded-lg">
               {tc("cancel")}
             </Button>
-            <Button type="submit" disabled={pending} className="h-10 rounded-xl px-5">
+            <Button type="submit" disabled={pending} className="h-11 rounded-lg px-5">
               {pending ? tc("saving") : albumId ? tc("save") : tc("create")}
             </Button>
           </DialogFooter>
@@ -154,7 +155,7 @@ function FormField({ id, label, hint, children }: { id: string; label: string; h
     <div className="flex min-w-0 flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="text-sm leading-relaxed text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

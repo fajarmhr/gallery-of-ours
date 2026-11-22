@@ -19,7 +19,9 @@
     "create-superadmin:prod": "tsx --env-file=.env.production.local scripts/create-superadmin.ts",
     "storage:organize": "tsx --env-file=.env.local scripts/organize-storage.ts",
     "storage:organize:prod": "tsx --env-file=.env.production.local scripts/organize-storage.ts",
-    "test:upload": "tsx --test scripts/upload-regression.test.ts"
+    "test:upload": "tsx --test scripts/upload-regression.test.ts",
+    "test:recap": "tsx --test scripts/recap-regression.test.ts",
+    "test:dates": "tsx --test scripts/date-regression.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",

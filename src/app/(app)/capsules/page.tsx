@@ -27,7 +27,7 @@ export default async function CapsulesPage() {
       capsule
       canSeal
       trigger={
-        <Button className="h-10 rounded-xl px-4">
+        <Button className="h-11 rounded-lg px-4">
           <Hourglass />
           {t("new")}
         </Button>
@@ -45,24 +45,24 @@ export default async function CapsulesPage() {
           {create}
         </EmptyState>
       ) : (
-        <div className="grid grid-cols-2 gap-x-2 gap-y-1 sm:grid-cols-3 sm:gap-x-4 xl:grid-cols-4">
+        <div className="grid gap-5 min-[360px]:grid-cols-2 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4">
           {capsules.map((capsule) => {
             const opens = new Date(capsule.unlockAt!);
             const sealed = opens.getTime() > now;
             const days = Math.max(1, Math.ceil((opens.getTime() - now) / 86_400_000));
             return (
-              <Link key={capsule.id} href={`/albums/${capsule.id}`} className="group flex flex-col gap-1 rounded-xl px-2.5 pb-4 pt-7 transition-colors hover:bg-foreground/5 sm:px-4">
-                <AlbumPile covers={capsule.covers.map((c) => mediaUrl(c.id, "thumb"))} locked={capsule.locked} sealed={sealed} className="mx-auto mb-6 w-[70%] sm:w-[62%]" />
-                <span className={cn("self-start rounded-full px-2.5 py-0.5 text-[11px] font-bold", sealed ? "bg-accent text-accent-foreground" : "bg-olive-soft text-olive")}>
+              <Link key={capsule.id} href={`/albums/${capsule.id}`} className="group flex min-w-0 flex-col gap-2 rounded-xl border bg-card p-4 pt-7 transition-colors hover:border-primary/35 sm:p-5 sm:pt-8">
+                <AlbumPile covers={capsule.covers.map((c) => mediaUrl(c.id, "thumb"))} locked={capsule.locked} sealed={sealed} className="mx-auto mb-5 w-[82%]" />
+                <span className={cn("self-start rounded-md px-2 py-1 text-xs font-medium", sealed ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground")}>
                   {sealed ? t("sealed") : t("open")}
                 </span>
-                <span className="font-display text-base font-bold leading-snug tracking-tight sm:text-lg">{capsule.title}</span>
-                <span className="text-xs text-muted-foreground sm:text-sm">
+                <span className="break-words font-display text-xl font-medium leading-tight tracking-tight sm:text-2xl">{capsule.title}</span>
+                <span className="text-sm leading-relaxed text-muted-foreground">
                   {sealed
                     ? `${t("opensIn", { count: days })} · ${t("opensOn", { date: format.dateTime(opens, { dateStyle: "medium" }) })}`
                     : t("opened", { date: format.dateTime(opens, { dateStyle: "medium" }) })}
                 </span>
-                {capsule.createdByName ? <span className="text-xs text-muted-foreground">{t("sealedBy", { name: capsule.createdByName })}</span> : null}
+                {capsule.createdByName ? <span className="text-sm text-muted-foreground">{t("sealedBy", { name: capsule.createdByName })}</span> : null}
               </Link>
             );
           })}

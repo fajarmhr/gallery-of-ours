@@ -18,7 +18,7 @@ export function RequestsList({ requests }: { requests: Request[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
 
-  if (requests.length === 0) return <p className="text-sm text-muted-foreground">{t("noRequests")}</p>;
+  if (requests.length === 0) return <p className="rounded-lg bg-muted/40 p-4 text-base leading-relaxed text-muted-foreground">{t("noRequests")}</p>;
 
   async function decide(request: Request, approve: boolean) {
     setBusy(request.id);
@@ -35,25 +35,25 @@ export function RequestsList({ requests }: { requests: Request[] }) {
   return (
     <ul className="divide-y">
       {requests.map((request) => (
-        <li key={request.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+        <li key={request.id} className="flex flex-wrap items-center gap-4 py-5 first:pt-0 last:pb-0">
           <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1 sm:basis-48">
             <UserAvatar name={request.name} />
             <div className="min-w-0 flex-1 leading-tight">
-              <p className="font-semibold [overflow-wrap:anywhere]">{request.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="text-base font-medium [overflow-wrap:anywhere]">{request.name}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">
                 {[request.username ? `@${request.username}` : null, request.email, t("requested", { date: format.relativeTime(new Date(request.createdAt)) })]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
-              {request.relationNote ? <p className="mt-1 text-sm italic [overflow-wrap:anywhere]">“{request.relationNote}”</p> : null}
+              {request.relationNote ? <p className="mt-2 text-base leading-relaxed [overflow-wrap:anywhere]">“{request.relationNote}”</p> : null}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" disabled={busy === request.id} onClick={() => decide(request, false)} className="h-9 rounded-lg">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <Button variant="outline" disabled={busy === request.id} onClick={() => decide(request, false)} className="h-11 flex-1 rounded-lg sm:flex-none">
               <X />
               {t("decline")}
             </Button>
-            <Button disabled={busy === request.id} onClick={() => decide(request, true)} className="h-9 rounded-lg bg-olive text-olive-foreground hover:bg-olive/90">
+            <Button disabled={busy === request.id} onClick={() => decide(request, true)} className="h-11 flex-1 rounded-lg sm:flex-none">
               <Check />
               {t("approve")}
             </Button>

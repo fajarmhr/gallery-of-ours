@@ -10,11 +10,11 @@ export const metadata: Metadata = { title: "Check your email" };
 export default async function VerifyEmailPage({ searchParams }: PageProps<"/verify-email">) {
   const params = await searchParams;
   const t = await getTranslations("auth");
-  const email = typeof params.email === "string" ? params.email : "";
+  const email = typeof params.email === "string" ? params.email.trim() : "";
   return (
     <>
-      <AuthHeading icon={<MailCheck className="size-7" />} title={t("checkEmailTitle")} lead={t("checkEmailText", { email })} />
-      <Button asChild variant="outline" className="h-12 w-full rounded-lg">
+      <AuthHeading icon={<MailCheck className="size-7" />} title={t("checkEmailTitle")} lead={email ? t("checkEmailText", { email }) : t("checkEmailTextNoAddress")} />
+      <Button asChild variant="outline" className="h-12 w-full rounded-lg text-base">
         <Link href="/sign-in">{t("backToSignIn")}</Link>
       </Button>
     </>

@@ -11,10 +11,11 @@ export const metadata: Metadata = { title: "Favorites" };
 export default async function FavoritesPage() {
   const user = await requireActiveUser();
   const t = await getTranslations("favorites");
+  const tc = await getTranslations("common");
   const items = await getFavorites(user.id);
   return (
     <>
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} note={items.length ? tc("items", { count: items.length }) : undefined} />
       {items.length === 0 ? (
         <EmptyState icon={Heart} title={t("emptyTitle")} text={t("emptyText")} />
       ) : (

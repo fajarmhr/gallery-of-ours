@@ -1,62 +1,72 @@
 "use client";
 
-import { animate, motion, useInView } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { animate, motion, useInView, useReducedMotion } from "motion/react";
+import { useFormatter } from "next-intl";
+import { useEffect, useRef } from "react";
 
 export function RecapStats({ stats }: { stats: { label: string; value: number }[] }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-4">
       {stats.map((stat, index) => (
         <motion.div
           key={stat.label}
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: index * 0.08, duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
-          className="rounded-xl border bg-card p-5"
+          className="flex min-w-0 flex-col gap-2 bg-card p-5 sm:p-6"
         >
-          <CountUp value={stat.value} className="block font-display text-3xl font-normal tabular-nums tracking-tight lg:text-4xl xl:text-5xl" />
-          <span className="text-sm font-semibold text-muted-foreground">{stat.label}</span>
+          <dt className="order-last text-sm font-medium text-muted-foreground">{stat.label}</dt>
+          <dd><CountUp value={stat.value} className="block font-display text-3xl font-normal tabular-nums tracking-tight sm:text-4xl" /></dd>
         </motion.div>
       ))}
-    </div>
+    </dl>
   );
 }
 
 function CountUp({ value, className }: { value: number; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
-  const [display, setDisplay] = useState(0);
+  const reducedMotion = useReducedMotion();
+  const format = useFormatter();
 
   useEffect(() => {
-    if (!inView) return;
-    const controls = animate(0, value, { duration: 1.2, ease: [0.2, 0.8, 0.2, 1], onUpdate: (v) => setDisplay(Math.round(v)) });
-    return () => controls.stop();
-  }, [inView, value]);
+    const element = ref.current;
+    if (!element || !inView || reducedMotion) return;
+    const controls = animate(0, value, {
+      duration: 0.7,
+      ease: [0.2, 0.8, 0.2, 1],
+      onUpdate: (v) => { element.textContent = format.number(Math.round(v)); },
+    });
+    return () => {
+      controls.stop();
+      element.textContent = format.number(value);
+    };
+  }, [inView, value, reducedMotion, format]);
 
   return (
     <span ref={ref} className={className}>
-      {display.toLocaleString()}
+      {format.number(value)}
     </span>
   );
 }
 
 export function RecapFacts({ facts }: { facts: { label: string; value: string }[] }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <dl className="grid gap-6 border-b py-6 sm:grid-cols-3">
       {facts.map((fact, index) => (
         <motion.div
           key={fact.label}
-          initial={{ opacity: 0, scale: 0.96 }}
-          whileInView={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.15 + index * 0.08, duration: 0.45 }}
-          className="rounded-xl bg-accent p-5 text-accent-foreground"
+          className="min-w-0"
         >
-          <p className="text-xs font-bold uppercase tracking-[0.12em]">{fact.label}</p>
-          <p className="mt-1 font-display text-3xl font-medium leading-tight text-foreground [overflow-wrap:anywhere]">{fact.value}</p>
+          <dt className="text-sm text-muted-foreground">{fact.label}</dt>
+          <dd className="mt-2 font-display text-2xl font-medium leading-tight [overflow-wrap:anywhere]">{fact.value}</dd>
         </motion.div>
       ))}
-    </div>
+    </dl>
   );
 }

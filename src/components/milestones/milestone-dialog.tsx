@@ -56,24 +56,24 @@ export function MilestoneDialog({ milestone, trigger }: { milestone?: Values & {
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} className="flex flex-col gap-4">
+      <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <form onSubmit={submit} className="flex flex-col gap-5">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl font-extrabold tracking-tight">{milestone ? t("edit") : t("new")}</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-medium tracking-tight">{milestone ? t("edit") : t("new")}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <Label htmlFor="m-title">{t("name")}</Label>
-            <Input id="m-title" required maxLength={100} placeholder={t("namePlaceholder")} value={values.title} onChange={(e) => setValues({ ...values, title: e.target.value })} className="h-11 rounded-xl" />
+            <Input id="m-title" required maxLength={100} placeholder={t("namePlaceholder")} value={values.title} onChange={(e) => setValues({ ...values, title: e.target.value })} className="h-12 rounded-lg" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="m-date">{t("date")}</Label>
-              <Input id="m-date" type="date" required value={values.date} onChange={(e) => setValues({ ...values, date: e.target.value })} className="h-11 rounded-xl" />
+              <Input id="m-date" type="date" required value={values.date} onChange={(e) => setValues({ ...values, date: e.target.value })} className="h-12 rounded-lg" />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="m-kind">{t("kind")}</Label>
               <Select value={values.kind} onValueChange={(kind) => setValues({ ...values, kind: kind as Kind })}>
-                <SelectTrigger id="m-kind" className="h-11 w-full rounded-xl">
+                <SelectTrigger id="m-kind" className="h-12 w-full min-w-0 rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -86,15 +86,15 @@ export function MilestoneDialog({ milestone, trigger }: { milestone?: Values & {
               </Select>
             </div>
           </div>
-          <label className="flex items-center justify-between gap-3 rounded-xl border bg-background px-3 py-2.5">
-            <span className="text-sm font-medium">{t("repeats")}</span>
-            <Switch checked={values.repeatsYearly} onCheckedChange={(repeatsYearly) => setValues({ ...values, repeatsYearly })} />
+          <label htmlFor="m-repeats" className="flex min-h-14 items-center justify-between gap-4 rounded-lg border bg-muted/30 p-4">
+            <span className="text-base">{t("repeats")}</span>
+            <Switch id="m-repeats" checked={values.repeatsYearly} onCheckedChange={(repeatsYearly) => setValues({ ...values, repeatsYearly })} />
           </label>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="h-10 rounded-xl">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="h-11 rounded-lg">
               {tc("cancel")}
             </Button>
-            <Button type="submit" disabled={pending} className="h-10 rounded-xl px-5">
+            <Button type="submit" disabled={pending} className="h-11 rounded-lg px-5">
               {pending ? tc("saving") : tc("save")}
             </Button>
           </DialogFooter>
@@ -111,7 +111,7 @@ export function MilestoneDeleteButton({ id }: { id: string }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <button type="button" aria-label={tc("delete")} className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+        <button type="button" aria-label={tc("delete")} className="grid size-11 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
           <Trash2 className="size-4" />
         </button>
       </AlertDialogTrigger>

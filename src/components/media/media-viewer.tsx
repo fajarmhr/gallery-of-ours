@@ -245,7 +245,7 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
       role="dialog"
       aria-modal="true"
       aria-label={caption ?? item.albumTitle ?? t("info")}
-      className="fixed inset-x-0 top-0 z-50 flex h-dvh overflow-hidden bg-[#0f0b09] text-[#f2e9df] outline-none"
+      className="fixed inset-x-0 top-0 z-50 flex h-dvh overflow-hidden bg-[#211e1b] text-[#f2e9df] outline-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -270,7 +270,7 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
               <ViewerButton label={t("comments")} onClick={() => setPanelOpen((open) => !open)} active={panelOpen}>
                 <MessageCircle />
                 {commentCount > 0 ? (
-                  <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+                  <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-xs font-medium leading-4 text-primary-foreground">
                     {commentCount}
                   </span>
                 ) : null}
@@ -280,14 +280,14 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
               href={mediaUrl(item.id, "download", shareToken)}
               aria-label={t("downloadOriginal")}
               title={t("downloadOriginal")}
-              className="grid size-11 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 [&_svg]:size-5"
+              className="grid size-11 shrink-0 place-items-center rounded-lg text-white/90 hover:bg-white/10 [&_svg]:size-5"
             >
               <Download />
             </a>
             {social?.canEdit ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button type="button" aria-label={tc("more")} className="grid size-11 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 [&_svg]:size-5">
+                  <button type="button" aria-label={tc("more")} className="grid size-11 shrink-0 place-items-center rounded-lg text-white/90 hover:bg-white/10 [&_svg]:size-5">
                     <Ellipsis />
                   </button>
                 </DropdownMenuTrigger>
@@ -407,7 +407,7 @@ export function MediaViewer({ items, index, morphId, onIndexChange, onClose, sha
               {format.dateTime(takenAt, { dateStyle: "medium" })} · {format.relativeTime(takenAt, now)}
             </p>
           ) : null}
-          {caption ? <p className="break-words font-display text-lg font-bold leading-snug">{caption}</p> : null}
+          {caption ? <p className="break-words font-display text-2xl font-medium leading-snug">{caption}</p> : null}
           {meta ? <p className="break-words text-sm text-white/85">{meta}</p> : null}
           {lovedBy ? (
             <p className="mt-1 flex items-center gap-1.5 text-xs text-white/80">
@@ -448,7 +448,7 @@ function HeartBurst() {
   return (
     <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 grid place-items-center">
       <motion.span
-        className="col-start-1 row-start-1 text-[#ff8f7a] drop-shadow-lg"
+        className="col-start-1 row-start-1 text-[#dc9578]"
         initial={{ scale: 0.2, opacity: 0 }}
         animate={{ scale: [0.2, 1.2, 1, 1], opacity: [0, 1, 1, 0] }}
         transition={{ duration: 1, times: [0, 0.3, 0.6, 1], ease: EASE }}
@@ -491,7 +491,7 @@ function ViewerButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "relative grid size-11 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 disabled:opacity-40 [&_svg]:size-5",
+        "relative grid size-11 shrink-0 place-items-center rounded-lg text-white/90 hover:bg-white/10 disabled:opacity-40 [&_svg]:size-5",
         active && "bg-white/15",
       )}
     >
@@ -507,7 +507,7 @@ function NavArrow({ side, label, onClick, children }: { side: "left" | "right"; 
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "glass absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full text-white [&_svg]:size-6",
+        "glass absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-lg text-white [&_svg]:size-6",
         side === "left" ? "left-[max(.75rem,env(safe-area-inset-left))]" : "right-[max(.75rem,env(safe-area-inset-right))]",
       )}
     >

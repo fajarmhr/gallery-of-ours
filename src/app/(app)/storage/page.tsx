@@ -42,10 +42,10 @@ export default async function StoragePage() {
   ]);
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <div className="grid gap-5">
-        <section className="rounded-xl border bg-card p-5">
+      <div className="grid gap-6">
+        <section className="paper-panel">
           <CardHead
             icon={<HardDrive className="size-5" />}
             title={onR2 ? t("r2Title") : t("localTitle")}
@@ -54,11 +54,11 @@ export default async function StoragePage() {
             kept={t("kept", { count: counts.get("primary") ?? 0 })}
           />
           {primary.ok ? (
-            <div className="mt-4 flex flex-col gap-2">
+            <div className="mt-6 flex flex-col gap-3 border-t pt-4">
               {onR2 ? (
                 <>
-                  <Meter percent={percentOf(primary.value.bytes, R2_FREE_BYTES)} />
-                  <p className="text-sm text-muted-foreground">
+                  <Meter percent={percentOf(primary.value.bytes, R2_FREE_BYTES)} label={t("r2Title")} />
+                  <p className="text-sm leading-relaxed text-muted-foreground">
                     {primary.value.bytes > R2_FREE_BYTES ? t("r2Over") : t("r2Free", { percent: percentOf(primary.value.bytes, R2_FREE_BYTES) })}
                   </p>
                 </>
@@ -74,7 +74,7 @@ export default async function StoragePage() {
           const result = clouds[index];
           const usage = result?.ok ? result.value : null;
           return (
-            <section key={account.cloudName} className="rounded-xl border bg-card p-5">
+            <section key={account.cloudName} className="paper-panel">
               <CardHead
                 icon={<Cloud className="size-5" />}
                 title={t("cloudinaryTitle", { number: index + 1 })}
@@ -83,11 +83,11 @@ export default async function StoragePage() {
                 kept={t("kept", { count: counts.get(cloudinarySource(account.cloudName)) ?? 0 })}
               />
               {usage ? (
-                <div className="mt-4 flex flex-col gap-2">
+                <div className="mt-6 flex flex-col gap-3 border-t pt-4">
                   {usage.creditsUsed !== null && usage.creditsLimit ? (
                     <>
-                      <Meter percent={percentOf(usage.creditsUsed, usage.creditsLimit)} />
-                      <p className="text-sm text-muted-foreground">
+                      <Meter percent={percentOf(usage.creditsUsed, usage.creditsLimit)} label={t("cloudinaryTitle", { number: index + 1 })} />
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {t("credits", {
                           used: format.number(usage.creditsUsed, { maximumFractionDigits: 2 }),
                           limit: format.number(usage.creditsLimit),
@@ -113,7 +113,7 @@ export default async function StoragePage() {
           );
         })}
 
-        <p className="px-1 text-xs text-muted-foreground">{t("liveNote")}</p>
+        <p className="max-w-[65ch] px-1 text-sm leading-relaxed text-muted-foreground">{t("liveNote")}</p>
       </div>
     </div>
   );
@@ -122,26 +122,26 @@ export default async function StoragePage() {
 function CardHead({ icon, title, detail, size, kept }: { icon: React.ReactNode; title: string; detail: string; size: string | null; kept: string }) {
   return (
     <>
-      <div className="flex flex-wrap items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground">{icon}</span>
-        <div className="min-w-0 flex-1 leading-tight">
-          <h2 className="font-display text-2xl font-medium [overflow-wrap:anywhere]">{title}</h2>
-          {detail ? <p className="truncate text-xs text-muted-foreground">{detail}</p> : null}
+      <div className="flex flex-wrap items-start gap-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-2xl font-medium leading-tight tracking-tight [overflow-wrap:anywhere]">{title}</h2>
+          {detail ? <p className="mt-1 truncate text-xs text-muted-foreground" title={detail}>{detail}</p> : null}
         </div>
-        {size ? <p className="w-full shrink-0 pl-[52px] font-display text-3xl font-medium tabular-nums sm:w-auto sm:pl-0">{size}</p> : null}
+        {size ? <p className="w-full shrink-0 pl-14 font-display text-3xl font-medium leading-tight tracking-tight tabular-nums sm:w-auto sm:pl-0">{size}</p> : null}
       </div>
-      <p className="mt-2 font-hand text-xl leading-none text-note">{kept}</p>
+      <p className="mt-4 text-sm text-muted-foreground">{kept}</p>
     </>
   );
 }
 
-function Meter({ percent }: { percent: number }) {
-  const width = Math.min(100, percent);
+function Meter({ percent, label }: { percent: number; label: string }) {
+  const width = Math.max(0, Math.min(100, percent));
   return (
-    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+    <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} aria-valuetext={`${percent}%`} className="h-2 overflow-hidden rounded-lg bg-muted">
       <div
-        className={cn("h-full rounded-full", width >= 90 ? "bg-destructive" : width >= 70 ? "bg-accent-foreground" : "bg-olive")}
-        style={{ width: `${Math.max(width, 2)}%` }}
+        className={cn("h-full rounded-lg", width >= 90 ? "bg-destructive" : width >= 70 ? "bg-accent-foreground" : "bg-olive")}
+        style={{ width: `${width}%` }}
       />
     </div>
   );
@@ -149,8 +149,8 @@ function Meter({ percent }: { percent: number }) {
 
 function Unavailable({ text }: { text: string }) {
   return (
-    <p className="mt-4 flex items-center gap-2 text-sm text-destructive">
-      <TriangleAlert className="size-4 shrink-0" />
+    <p className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/15 bg-destructive/5 p-4 text-sm leading-relaxed text-destructive">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" />
       {text}
     </p>
   );

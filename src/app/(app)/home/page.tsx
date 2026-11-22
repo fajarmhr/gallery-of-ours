@@ -2,7 +2,7 @@ import { Cake, Heart, Hourglass, Images, Sparkles, UserCheck } from "lucide-reac
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getFormatter, getLocale, getTranslations } from "next-intl/server";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState, PageHeader, PageSection } from "@/components/empty-state";
 import { MediaGallery } from "@/components/media/media-grid";
 import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import { StoryButton, type StorySlide } from "@/components/story/story-player";
@@ -45,7 +45,7 @@ export default async function HomePage() {
   const [[albumCount], found, upcoming, recent, pending, years, anniversaries] = await Promise.all([
     db.select({ value: count() }).from(albums).where(isNull(albums.deletedAt)),
     getMemories(user.id, timeZone),
-    getUpcoming(60),
+    getUpcoming(60, timeZone),
     getRecentMedia(user.id, 10),
     admin ? getPendingUsers() : Promise.resolve([]),
     getRecapYears(user.id, timeZone),
@@ -62,7 +62,7 @@ export default async function HomePage() {
         <Heading greeting={greeting} title={td("homeTitle")} date={format.dateTime(new Date(), { dateStyle: "full" })} />
         <EmptyState icon={Images} title={t("emptyTitle")} text={t("emptyText")}>
           {(await canCreateAlbum(user)) ? (
-            <Button asChild className="h-10 rounded-xl px-5">
+            <Button asChild className="h-11 rounded-lg px-5">
               <Link href="/albums">{t("createFirstAlbum")}</Link>
             </Button>
           ) : null}
@@ -77,7 +77,7 @@ export default async function HomePage() {
   const newestYear = found.items[0] ? dayKey(found.items[0].takenAt!, timeZone).slice(0, 4) : null;
   const memories = newestYear ? found.items.filter((m) => dayKey(m.takenAt!, timeZone).startsWith(newestYear)) : [];
   const hero = memories[0];
-  const yearsAgo = hero ? yearsSince(dayKey(hero.takenAt!, timeZone), new Date()) : 0;
+  const yearsAgo = hero ? yearsSince(dayKey(hero.takenAt!, timeZone), new Date(), timeZone) : 0;
   const onThisDay = found.level === "day";
   const memoryHeading = onThisDay ? ts("onThisDay") : tm(found.level);
   const memoryWhen = onThisDay
@@ -151,7 +151,7 @@ export default async function HomePage() {
                   <span className="min-w-0 flex-1 leading-tight">
                     <span className="block truncate text-sm font-semibold">
                       {item.title}
-                      {item.kind === "milestone" && item.repeatsYearly ? ` · ${t("turnsYears", { count: yearsSince(item.originalDate, new Date(item.date)) })}` : ""}
+                      {item.kind === "milestone" && item.repeatsYearly ? ` · ${t("turnsYears", { count: yearsSince(item.originalDate, new Date(item.date), timeZone) })}` : ""}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {item.kind === "capsule"
@@ -159,7 +159,7 @@ export default async function HomePage() {
                         : format.dateTime(new Date(item.date), { day: "numeric", month: "long" })}
                     </span>
                   </span>
-                  <span className="whitespace-nowrap text-xs font-bold text-accent-foreground">
+                  <span className="whitespace-nowrap text-sm font-medium text-accent-foreground">
                     {item.days === 0 ? t("today") : item.days === 1 ? t("tomorrow") : t("inDays", { count: item.days })}
                   </span>
                 </li>
@@ -167,7 +167,7 @@ export default async function HomePage() {
             </ul>
           )}
           {admin ? (
-            <Link href="/milestones" className="mt-3 inline-block text-sm font-semibold text-accent-foreground hover:underline">
+            <Link href="/milestones" className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
               {t("addMilestone")}
             </Link>
           ) : null}
@@ -200,12 +200,11 @@ export default async function HomePage() {
       </div>
 
       {milestoneMemories.length > 0 || anniversaries.length > 0 ? (
-        <section className="mt-10">
-          <h2 className="mb-3 font-display text-2xl font-medium tracking-tight">{t("todayTitle")}</h2>
+        <PageSection className="mt-10" title={t("todayTitle")}>
           <div className="grid gap-4 sm:grid-cols-2">
             {milestoneMemories.map(({ item, photos }) => {
               const cover = photos.at(-1)!;
-              const turns = yearsSince(item.originalDate, new Date(item.date));
+              const turns = yearsSince(item.originalDate, new Date(item.date), timeZone);
               const note = turns > 0 ? (item.milestoneKind === "birthday" ? t("milestoneTurns", { count: turns }) : t("milestoneYears", { count: turns })) : undefined;
               const slides: StorySlide[] = [
                 { key: "intro", title: item.title, note, meta: t("milestonePhotos", { count: photos.length }), image: mediaUrl(cover.id, "large") },
@@ -214,21 +213,20 @@ export default async function HomePage() {
                   image: mediaUrl(m.id, "large"),
                   title: captionOf(m) ?? m.albumTitle ?? item.title,
                   stamp: filmStamp(m.takenAt!, timeZone),
-                  meta: [tm("yearsAgo", { count: yearsSince(dayKey(m.takenAt!, timeZone), new Date()) }), m.placeName].filter(Boolean).join(" · "),
+                  meta: [tm("yearsAgo", { count: yearsSince(dayKey(m.takenAt!, timeZone), new Date(), timeZone) }), m.placeName].filter(Boolean).join(" · "),
                 })),
               ];
               return (
-                <div key={item.id} className="relative flex min-h-[220px] overflow-hidden rounded-xl bg-[#2e241d] text-white">
-                  <ThumbhashImage src={mediaUrl(cover.id, "medium")} thumbhash={cover.thumbhash} className="absolute inset-0" imgClassName="animate-kenburns" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/85 via-[#1c120e]/20 to-transparent" />
-                  <div className="relative mt-auto flex w-full flex-wrap items-end justify-between gap-3 p-5">
+                <div key={item.id} className="flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card">
+                  <ThumbhashImage src={mediaUrl(cover.id, "medium")} alt={item.title} thumbhash={cover.thumbhash} className="aspect-[16/9] w-full" />
+                  <div className="flex w-full flex-wrap items-end justify-between gap-4 p-5">
                     <div className="min-w-0">
-                      {note ? <p className="inline-block origin-left -rotate-2 font-hand text-2xl text-[#ffd3a8]">{note}</p> : null}
-                      <h3 className="flex items-center gap-2 font-display text-3xl font-medium leading-tight tracking-tight">
+                      {note ? <p className="mb-2 text-sm font-medium text-note">{note}</p> : null}
+                      <h3 className="flex items-center gap-2 font-display text-2xl font-medium leading-tight tracking-tight">
                         {item.milestoneKind === "birthday" ? <Cake className="size-5 shrink-0" /> : <Heart className="size-5 shrink-0" />}
                         {item.title}
                       </h3>
-                      <p className="mt-1 text-sm text-white/80">{t("milestonePhotos", { count: photos.length })}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{t("milestonePhotos", { count: photos.length })}</p>
                     </div>
                     <StoryButton slides={slides} heading={item.title} label={t("relive")} variant="secondary" />
                   </div>
@@ -236,32 +234,28 @@ export default async function HomePage() {
               );
             })}
             {anniversaries.map((album) => (
-              <Link key={album.id} href={`/albums/${album.id}`} className="group relative flex min-h-[220px] items-end overflow-hidden rounded-xl bg-[#2e241d] p-5 text-white">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={mediaUrl(album.coverId, "medium")} alt="" className="absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-700 group-hover:scale-105" />
-                <span className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/85 via-[#1c120e]/20 to-transparent" />
-                <span className="relative min-w-0">
-                  <span className="date-stamp block text-sm">{t("yearsAgo", { count: yearsSince(album.startDate, new Date()) })}</span>
-                  {album.note ? <span className="mt-1 block origin-left -rotate-2 font-hand text-2xl leading-tight text-[#ffd3a8]">{album.note}</span> : null}
-                  <span className="block font-display text-3xl font-medium leading-tight tracking-tight">{album.title}</span>
-                  <span className="mt-1 block text-sm text-white/80">{tc("photos", { count: album.itemCount })}</span>
+              <Link key={album.id} href={`/albums/${album.id}`} className="group flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/35">
+                <ThumbhashImage src={mediaUrl(album.coverId, "medium")} alt={album.title} className="aspect-[16/9] w-full" imgClassName="transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transform-none" />
+                <span className="min-w-0 p-5">
+                  <span className="block text-sm font-medium text-note">{t("yearsAgo", { count: yearsSince(album.startDate, new Date(), timeZone) })}</span>
+                  {album.note ? <span className="mt-2 block text-sm text-muted-foreground">{album.note}</span> : null}
+                  <span className="mt-2 block font-display text-2xl font-medium leading-tight tracking-tight">{album.title}</span>
+                  <span className="mt-2 block text-sm text-muted-foreground">{tc("photos", { count: album.itemCount })}</span>
                 </span>
               </Link>
             ))}
           </div>
-        </section>
+        </PageSection>
       ) : null}
 
       {recent.length > 0 ? (
-        <section className="mt-10">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-2xl font-medium tracking-tight">{t("recentlyAdded")}</h2>
-            <Link href="/timeline" className="text-sm font-semibold text-accent-foreground hover:underline">
+        <PageSection className="mt-10" title={t("recentlyAdded")} action={
+            <Link href="/timeline" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
               {t("seeAll")}
             </Link>
-          </div>
+        }>
           <MediaGallery groups={[{ key: "recent", items: recent }]} />
-        </section>
+        </PageSection>
       ) : null}
     </>
   );
@@ -269,12 +263,8 @@ export default async function HomePage() {
 
 function Heading({ greeting, title, date }: { greeting: string; title: string; date: string }) {
   return (
-    <div className="mb-9 flex flex-wrap items-end justify-between gap-5 border-b pb-8 sm:mb-10">
-      <div className="max-w-[660px]">
-        <p className="mb-3 text-sm font-medium text-note">{greeting}</p>
-        <h1 className="text-balance font-display text-[2.75rem] font-normal leading-[1.06] tracking-[-0.035em] sm:text-[3.6rem]">{title}</h1>
-      </div>
+    <PageHeader note={greeting} title={title}>
       <p className="pb-1 text-sm text-muted-foreground">{date}</p>
-    </div>
+    </PageHeader>
   );
 }

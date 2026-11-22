@@ -30,7 +30,7 @@ export default async function AlbumsPage({ searchParams }: PageProps<"/albums">)
     <AlbumFormDialog
       canSeal={isAdmin(user)}
       trigger={
-        <Button className="h-10 rounded-xl px-4">
+        <Button className="h-11 rounded-lg px-4">
           <Plus />
           {t("newAlbum")}
         </Button>
@@ -50,7 +50,7 @@ export default async function AlbumsPage({ searchParams }: PageProps<"/albums">)
         </EmptyState>
       ) : (
         <>
-          <nav className="mb-6 flex flex-wrap gap-x-5 gap-y-1 border-b" aria-label={t("fieldCategory")}>
+          <nav className="mb-8 flex flex-wrap gap-x-5 gap-y-1 border-b" aria-label={t("fieldCategory")}>
             {CATEGORIES.map((c) => (
               <Link
                 key={c}
@@ -65,7 +65,7 @@ export default async function AlbumsPage({ searchParams }: PageProps<"/albums">)
               </Link>
             ))}
           </nav>
-          {shown.length === 0 ? <p className="py-10 text-center text-muted-foreground">{t("emptyFilter")}</p> : <AlbumGrid albums={shown} />}
+          {shown.length === 0 ? <p className="rounded-xl border border-dashed px-5 py-12 text-center text-sm text-muted-foreground">{t("emptyFilter")}</p> : <AlbumGrid albums={shown} />}
         </>
       )}
     </>

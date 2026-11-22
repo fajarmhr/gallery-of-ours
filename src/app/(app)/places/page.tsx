@@ -2,8 +2,9 @@ import { Earth, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { EmptyState, PageHeader } from "@/components/empty-state";
+import { EmptyState, PageHeader, PageSection } from "@/components/empty-state";
 import { MediaGallery } from "@/components/media/media-grid";
+import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import { PlacesMap } from "@/components/places/places-map";
 import { Button } from "@/components/ui/button";
 import { mediaUrl } from "@/lib/format";
@@ -38,7 +39,7 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
   return (
     <>
       <PageHeader title={t("title")} subtitle={t("subtitle", { places: places.length, photos: totalPhotos })}>
-        <Button asChild variant="outline" className="h-10 rounded-xl px-4">
+        <Button asChild variant="outline" className="h-11 rounded-lg px-4">
           <Link href="/globe">
             <Earth />
             {t("openGlobe")}
@@ -46,9 +47,9 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
         </Button>
       </PageHeader>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
         <PlacesMap selectedId={selected?.id ?? null} points={points} />
-        <ul className="flex max-h-[540px] flex-col gap-1 overflow-y-auto">
+        <ul aria-label={t("title")} className="flex max-h-80 min-w-0 flex-col gap-1 overflow-y-auto overscroll-contain rounded-xl border bg-card p-2 lg:max-h-[500px]">
           {places.map((place) => (
             <li key={place.id}>
               <Link
@@ -56,18 +57,17 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
                 scroll={false}
                 aria-current={place.id === selected?.id ? "true" : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl border border-transparent p-2 transition-colors hover:bg-foreground/5",
-                  place.id === selected?.id && "border-border bg-card shadow-sm",
+                  "flex min-h-20 items-center gap-3 rounded-lg border border-transparent p-3 transition-colors hover:bg-muted",
+                  place.id === selected?.id && "border-primary/20 bg-accent/60",
                 )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={mediaUrl(place.coverId, "thumb")} alt="" className="size-12 shrink-0 rounded-xl object-cover" />
+                <ThumbhashImage src={mediaUrl(place.coverId, "thumb")} className="size-12 shrink-0 rounded-lg" />
                 <span className="min-w-0 leading-tight">
-                  <span className="block truncate text-sm font-semibold">{place.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="block truncate text-sm font-medium leading-relaxed">{place.name}</span>
+                  <span className="block text-xs leading-relaxed text-muted-foreground">
                     {[tc("photos", { count: place.count }), place.city, place.country].filter(Boolean).join(" · ")}
                   </span>
-                  <span className="mt-0.5 block truncate font-hand text-base leading-tight text-note">
+                  <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
                     {[
                       t("firstVisit", { date: format.dateTime(new Date(place.firstAt * 1000), { month: "short", year: "numeric" }) }),
                       place.albumCount > 1 ? t("visits", { count: place.albumCount }) : null,
@@ -83,15 +83,11 @@ export default async function PlacesPage({ searchParams }: PageProps<"/places">)
       </div>
 
       {selected ? (
-        <section className="mt-10">
-          <div className="mb-4 flex flex-wrap items-baseline gap-x-3">
-            <h2 className="font-display text-3xl font-medium tracking-tight">{selected.name}</h2>
-            <span className="text-sm text-muted-foreground">{t("photosHere")}</span>
-          </div>
+        <PageSection title={selected.name} description={t("photosHere")} className="mt-10">
           <MediaGallery groups={[{ key: selected.id, items }]} />
-        </section>
+        </PageSection>
       ) : (
-        <p className="mt-10 text-center text-sm text-muted-foreground">{t("pickPlace")}</p>
+        <p className="mt-6 rounded-xl border border-dashed px-5 py-6 text-center text-sm text-muted-foreground">{t("pickPlace")}</p>
       )}
     </>
   );

@@ -5,13 +5,12 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { restartInviteSignUp, resendInviteCode, signUpWithInvite, verifyInviteCode } from "@/actions/invites";
-import { AuthHeadingClient } from "@/components/auth/forgot-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { authErrorMessage, fieldClass } from "./sign-in-form";
+import { Field, FormHeading, FormMessage, fieldClass } from "./auth-presentation";
+import { authErrorMessage } from "./sign-in-form";
 
 /**
  * The invite token from the link, already checked on the server. `pendingEmail` (masked) is set when the account
@@ -48,37 +47,41 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
     const email = values.email.trim().toLowerCase();
     const profile = { name: values.name.trim(), email, password: values.password, username: values.username.trim().toLowerCase() };
 
-    if (invite?.valid) {
-      const result = await signUpWithInvite({
-        ...profile,
-        token: invite.token,
-        relationNote: values.relation.trim() || null,
-        locale: locale === "id" ? "id" : "en",
-      });
-      setPending(false);
-      if (!result.ok) {
-        setError(actionError(result.error));
+    try {
+      if (invite?.valid) {
+        const result = await signUpWithInvite({
+          ...profile,
+          token: invite.token,
+          relationNote: values.relation.trim() || null,
+          locale: locale === "id" ? "id" : "en",
+        });
+        if (!result.ok) {
+          setError(actionError(result.error));
+          return;
+        }
+        setCode("");
+        setNotice(null);
+        setCodeFor(result.data.email);
+        if (!result.data.codeSent) setError(ti("codeNotSent"));
         return;
       }
-      setCode("");
-      setNotice(null);
-      setCodeFor(result.data.email);
-      if (!result.data.codeSent) setError(ti("codeNotSent"));
-      return;
-    }
 
-    const result = await authClient.signUp.email({
-      ...profile,
-      relationNote: values.relation.trim() || undefined,
-      locale,
-      callbackURL: "/pending",
-    });
-    setPending(false);
-    if (result.error) {
-      setError(authErrorMessage(t, result.error.code));
-      return;
+      const result = await authClient.signUp.email({
+        ...profile,
+        relationNote: values.relation.trim() || undefined,
+        locale,
+        callbackURL: "/pending",
+      });
+      if (result.error) {
+        setError(authErrorMessage(t, result.error.code));
+        return;
+      }
+      setSentTo(email);
+    } catch {
+      setError(te("network"));
+    } finally {
+      setPending(false);
     }
-    setSentTo(email);
   }
 
   async function onVerify(event: React.FormEvent) {
@@ -87,15 +90,20 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
     setPending(true);
     setError(null);
     setNotice(null);
-    const result = await verifyInviteCode({ token: invite.token, code });
-    if (!result.ok) {
+    try {
+      const result = await verifyInviteCode({ token: invite.token, code });
+      if (!result.ok) {
+        setPending(false);
+        setError(actionError(result.error));
+        return;
+      }
+      // A full page load uses the newly set session cookie immediately on phones.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- router.replace after this cookie-setting action left phones stuck on the form
+      window.location.assign("/home");
+    } catch {
       setPending(false);
-      setError(actionError(result.error));
-      return;
+      setError(te("network"));
     }
-    // A full page load, so the new session is used at once; stays "pending" until the gallery opens.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- router.replace after this cookie-setting action left phones stuck on the form
-    window.location.assign("/home");
   }
 
   async function onResend() {
@@ -103,14 +111,19 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
     setBusy("resend");
     setError(null);
     setNotice(null);
-    const result = await resendInviteCode(invite.token);
-    setBusy(null);
-    if (!result.ok) {
-      setError(actionError(result.error));
-      return;
+    try {
+      const result = await resendInviteCode(invite.token);
+      if (!result.ok) {
+        setError(actionError(result.error));
+        return;
+      }
+      setCode("");
+      setNotice(ti("codeResent"));
+    } catch {
+      setError(te("network"));
+    } finally {
+      setBusy(null);
     }
-    setCode("");
-    setNotice(ti("codeResent"));
   }
 
   async function onRestart() {
@@ -118,26 +131,31 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
     setBusy("restart");
     setError(null);
     setNotice(null);
-    const result = await restartInviteSignUp(invite.token);
-    setBusy(null);
-    if (!result.ok) {
-      setError(actionError(result.error));
-      return;
+    try {
+      const result = await restartInviteSignUp(invite.token);
+      if (!result.ok) {
+        setError(actionError(result.error));
+        return;
+      }
+      setCode("");
+      setCodeFor(null);
+      setValues((v) => ({ ...v, password: "" }));
+    } catch {
+      setError(te("network"));
+    } finally {
+      setBusy(null);
     }
-    setCode("");
-    setCodeFor(null);
-    setValues((v) => ({ ...v, password: "" }));
   }
 
   if (invite && !invite.valid) {
     return (
-      <div>
-        <AuthHeadingClient icon={<Unlink className="size-7" />} title={ti("invalidTitle")} lead={ti("invalidText")} />
+      <div className="flex flex-col gap-6">
+        <FormHeading icon={<Unlink />} title={ti("invalidTitle")} lead={ti("invalidText")} />
         <div className="flex flex-col gap-2">
-          <Button asChild className="h-12 w-full rounded-lg">
+          <Button asChild className="h-12 w-full rounded-lg text-base">
             <Link href="/sign-up">{t("requestAccess")}</Link>
           </Button>
-          <Button asChild variant="outline" className="h-12 w-full rounded-lg">
+          <Button asChild variant="outline" className="h-12 w-full rounded-lg text-base">
             <Link href="/sign-in">{t("signIn")}</Link>
           </Button>
         </div>
@@ -147,9 +165,9 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
 
   if (sentTo) {
     return (
-      <div>
-        <AuthHeadingClient icon={<MailCheck className="size-7" />} title={t("checkEmailTitle")} lead={t("checkEmailText", { email: sentTo })} />
-        <Button asChild variant="outline" className="h-12 w-full rounded-lg">
+      <div className="flex flex-col gap-6">
+        <FormHeading icon={<MailCheck />} title={t("checkEmailTitle")} lead={t("checkEmailText", { email: sentTo })} />
+        <Button asChild variant="outline" className="h-12 w-full rounded-lg text-base">
           <Link href="/">{t("backToStart")}</Link>
         </Button>
       </div>
@@ -159,8 +177,8 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
   if (invited && codeFor) {
     return (
       <form onSubmit={onVerify} className="flex flex-col gap-5" aria-busy={pending || busy !== null}>
-        <AuthHeadingClient title={ti("codeTitle")} lead={ti("codeLead", { email: codeFor })} />
-        <p className="-mt-2 font-hand text-2xl leading-none text-note">{ti("almostHome")}</p>
+        <FormHeading title={ti("codeTitle")} lead={ti("codeLead", { email: codeFor })} />
+        <p className="-mt-2 text-sm font-medium text-note">{ti("almostHome")}</p>
         <Field id="code" label={ti("code")} hint={ti("codeHint")}>
           <Input
             id="code"
@@ -175,12 +193,8 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
             className={cn(fieldClass, "text-center font-mono text-2xl tracking-[0.4em]")}
           />
         </Field>
-        {notice ? <p role="status" className="rounded-lg bg-olive-soft px-3 py-2.5 text-sm font-medium text-olive">{notice}</p> : null}
-        {error ? (
-          <p role="alert" className="text-sm font-medium text-destructive">
-            {error}
-          </p>
-        ) : null}
+        {notice ? <FormMessage>{notice}</FormMessage> : null}
+        {error ? <FormMessage error>{error}</FormMessage> : null}
         <Button type="submit" disabled={pending || busy !== null || code.length !== 6} className="mt-1 h-12 rounded-lg text-base">
           {pending ? ti("verifying") : ti("verify")}
         </Button>
@@ -189,11 +203,11 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
             type="button"
             onClick={onResend}
             disabled={pending || busy !== null}
-            className="inline-flex min-h-11 items-center font-semibold text-accent-foreground hover:underline disabled:opacity-50"
+            className="inline-flex min-h-11 items-center rounded-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
           >
             {busy === "resend" ? t("sending") : ti("resend")}
           </button>
-          <button type="button" onClick={onRestart} disabled={pending || busy !== null} className="inline-flex min-h-11 items-center text-muted-foreground hover:underline disabled:opacity-50">
+          <button type="button" onClick={onRestart} disabled={pending || busy !== null} className="inline-flex min-h-11 items-center rounded-sm text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50">
             {ti("startOver")}
           </button>
         </div>
@@ -203,7 +217,7 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={pending}>
-      <AuthHeadingClient
+      <FormHeading
         title={invited ? ti("signUpTitle") : t("requestAccess")}
         lead={invited ? (invite?.invitedBy ? ti("signUpLead", { name: invite.invitedBy }) : ti("signUpLeadAnonymous")) : t("requestLead")}
       />
@@ -235,30 +249,16 @@ export function SignUpForm({ invite = null }: { invite?: SignUpInvite | null }) 
       <Field id="relation" label={t("relation")}>
         <Input id="relation" maxLength={120} value={values.relation} onChange={set("relation")} className={fieldClass} />
       </Field>
-      {error ? (
-        <p role="alert" className="text-sm font-medium text-destructive">
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormMessage error>{error}</FormMessage> : null}
       <Button type="submit" disabled={pending} className="mt-1 h-12 rounded-lg text-base">
         {invited ? (pending ? ti("joining") : ti("join")) : pending ? t("sending") : t("sendRequest")}
       </Button>
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="border-t pt-5 text-center text-sm leading-relaxed text-muted-foreground">
         {t("haveAccount")}{" "}
-        <Link href="/sign-in" className="font-semibold text-accent-foreground hover:underline">
+        <Link href="/sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
           {t("signIn")}
         </Link>
       </p>
     </form>
-  );
-}
-
-export function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {hint ? <span id={`${id}-hint`} className="text-sm leading-relaxed text-muted-foreground">{hint}</span> : null}
-    </div>
   );
 }

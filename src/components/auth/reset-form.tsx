@@ -7,9 +7,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { AuthHeadingClient } from "./forgot-form";
-import { authErrorMessage, fieldClass } from "./sign-in-form";
-import { Field } from "./sign-up-form";
+import { Field, FormHeading, FormMessage, fieldClass } from "./auth-presentation";
+import { authErrorMessage } from "./sign-in-form";
 
 export function ResetForm({ token }: { token: string | null }) {
   const t = useTranslations("auth");
@@ -44,22 +43,18 @@ export function ResetForm({ token }: { token: string | null }) {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={pending}>
-      <AuthHeadingClient title={t("resetTitle")} lead={t("resetLead")} />
+      <FormHeading title={t("resetTitle")} lead={t("resetLead")} />
       <Field id="password" label={t("newPassword")}>
         <Input id="password" type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={fieldClass} disabled={!token} />
       </Field>
       <Field id="confirm" label={t("confirmPassword")}>
         <Input id="confirm" type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={fieldClass} disabled={!token} />
       </Field>
-      {error ? (
-        <p role="alert" className="text-sm font-medium text-destructive">
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormMessage error>{error}</FormMessage> : null}
       <Button type="submit" disabled={pending || !token} className="h-12 rounded-lg text-base">
         {pending ? t("sending") : t("setPassword")}
       </Button>
-      <Link href={token ? "/sign-in" : "/forgot-password"} className="text-center text-sm font-semibold text-accent-foreground hover:underline">
+      <Link href={token ? "/sign-in" : "/forgot-password"} className="inline-flex min-h-11 items-center justify-center rounded-sm border-t pt-5 text-center text-sm font-medium text-primary underline-offset-4 hover:underline">
         {token ? t("backToSignIn") : t("forgotTitle")}
       </Link>
     </form>

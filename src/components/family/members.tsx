@@ -34,8 +34,8 @@ type Member = {
 };
 
 const ROLE_STYLE: Record<string, string> = {
-  superadmin: "bg-foreground text-background",
-  admin: "bg-accent text-accent-foreground",
+  superadmin: "bg-primary/10 text-primary",
+  admin: "bg-muted text-foreground",
   member: "bg-olive-soft text-olive",
 };
 
@@ -112,21 +112,21 @@ export function MembersList({
           const open = granting === member.id;
           const removable = canChangeRoles && member.id !== currentUserId && member.role !== "superadmin";
           return (
-            <li key={member.id} className="py-3 first:pt-0 last:pb-0">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <li key={member.id} className="py-5 first:pt-0 last:pb-0">
+              <div className="flex flex-wrap items-center gap-4">
                 <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1 sm:basis-48">
                   <UserAvatar name={member.name} image={member.image} />
                   <div className="min-w-0 flex-1 leading-tight">
-                    <p className="truncate font-semibold">
+                    <p className="truncate text-base font-medium">
                       {member.name} {member.id === currentUserId ? <span className="font-normal text-muted-foreground">{t("you")}</span> : null}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">{member.username ? `@${member.username}` : member.email}</p>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">{member.username ? `@${member.username}` : member.email}</p>
                   </div>
                 </div>
 
                 {canChangeRoles ? (
                   <Select value={member.role} onValueChange={(value) => changeRole(member, value as Role)}>
-                    <SelectTrigger className="h-9 w-[140px] rounded-full" aria-label={tr(member.role as Role)}>
+                    <SelectTrigger className="h-11 w-40 rounded-lg" aria-label={tr(member.role as Role)}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -138,7 +138,7 @@ export function MembersList({
                     </SelectContent>
                   </Select>
                 ) : (
-                  <span className={cn("rounded-full px-3 py-1 text-xs font-bold", ROLE_STYLE[member.role])}>{tr(member.role as Role)}</span>
+                  <span className={cn("rounded-md px-3 py-1.5 text-sm font-medium", ROLE_STYLE[member.role])}>{tr(member.role as Role)}</span>
                 )}
 
                 {removable ? (
@@ -148,14 +148,16 @@ export function MembersList({
                     onClick={() => setRemoving(member)}
                     aria-label={t("removeLabel", { name: member.name })}
                     title={t("removeLabel", { name: member.name })}
-                    className="size-9 rounded-full text-muted-foreground hover:text-destructive"
+                    className="size-11 rounded-lg text-muted-foreground hover:text-destructive"
                   >
                     <UserMinus />
                   </Button>
+                ) : canChangeRoles ? (
+                  <span aria-hidden="true" className="hidden size-11 shrink-0 sm:block" />
                 ) : null}
 
-                <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:min-w-[240px] sm:justify-end">
-                  <span className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere] sm:text-right">{scopeLabel(member)}</span>
+                <div className="flex min-h-11 w-full items-center justify-between gap-3 sm:w-auto sm:min-w-[240px] sm:justify-end">
+                  <span className="min-w-0 text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere] sm:text-right">{scopeLabel(member)}</span>
                   {isMember ? (
                     <Switch
                       checked={Boolean(member.grant) || open}
@@ -176,12 +178,12 @@ export function MembersList({
               </div>
 
               {open ? (
-                <div className="mt-3 flex flex-col gap-3 rounded-2xl border bg-background p-3">
-                  <p className="text-sm font-semibold [overflow-wrap:anywhere]">{t("editingAccess", { name: member.name })}</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-20 text-xs font-bold text-muted-foreground">{t("scope")}</span>
+                <div className="mt-5 flex flex-col gap-5 rounded-lg border bg-muted/30 p-4 sm:p-5">
+                  <h3 className="font-display text-xl font-medium tracking-tight [overflow-wrap:anywhere]">{t("editingAccess", { name: member.name })}</h3>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="min-w-20 text-sm font-medium text-muted-foreground">{t("scope")}</span>
                     <Select value={scope} onValueChange={setScope}>
-                      <SelectTrigger className="h-9 w-full min-w-0 max-w-full rounded-xl sm:w-64 [&_[data-slot=select-value]]:min-w-0">
+                      <SelectTrigger className="h-11 w-full min-w-0 max-w-full rounded-lg sm:w-64 [&_[data-slot=select-value]]:min-w-0">
                         <SelectValue placeholder={t("chooseAlbum")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -195,7 +197,7 @@ export function MembersList({
                     </Select>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-20 text-xs font-bold text-muted-foreground">{t("duration")}</span>
+                    <span className="w-full text-sm font-medium text-muted-foreground">{t("duration")}</span>
                     {[
                       { value: 1, label: t("oneDay") },
                       { value: 7, label: t("sevenDays") },
@@ -208,19 +210,19 @@ export function MembersList({
                         aria-pressed={days === option.value}
                         onClick={() => setDays(option.value)}
                         className={cn(
-                          "h-8 rounded-full border px-3 text-xs font-semibold",
-                          days === option.value ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+                          "min-h-11 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                          days === option.value ? "border-primary bg-primary/10 text-primary" : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
                         )}
                       >
                         {option.label}
                       </button>
                     ))}
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" onClick={() => setGranting(null)} className="h-9 rounded-lg">
+                  <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+                    <Button variant="ghost" onClick={() => setGranting(null)} className="h-11 rounded-lg">
                       {tc("cancel")}
                     </Button>
-                    <Button onClick={() => give(member)} className="h-9 rounded-lg bg-olive text-olive-foreground hover:bg-olive/90">
+                    <Button onClick={() => give(member)} className="h-11 rounded-lg">
                       {t("give")}
                     </Button>
                   </div>

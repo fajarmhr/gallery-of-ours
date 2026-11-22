@@ -284,10 +284,10 @@ export function UploadProvider({
           }}
           className="gap-0 overflow-y-auto overscroll-contain data-[side=right]:w-full sm:data-[side=right]:max-w-lg"
         >
-          <SheetHeader className="sticky top-0 z-10 shrink-0 border-b bg-popover pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))]">
+          <SheetHeader className="sticky top-0 z-10 shrink-0 border-b bg-popover pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-[max(1.25rem,env(safe-area-inset-top))]">
             <div className="flex min-w-0 items-start gap-3">
               <div className="min-w-0 flex-1">
-                <SheetTitle className="font-display text-3xl font-medium tracking-tight">{t("title")}</SheetTitle>
+                <SheetTitle className="font-display text-2xl font-medium tracking-tight">{t("title")}</SheetTitle>
                 <SheetDescription>{t("footer")}</SheetDescription>
               </div>
               <SheetClose asChild>
@@ -296,11 +296,11 @@ export function UploadProvider({
             </div>
           </SheetHeader>
 
-          <div className="flex min-w-0 flex-col gap-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex min-w-0 flex-col gap-6 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {arrival ? <ArrivalCard key={arrival.id} arrival={arrival} onOpen={openArrival} onClose={closeArrival} /> : null}
 
             {albums.length === 0 ? (
-              <p className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">{canCreateAlbum ? t("noAlbums") : t("noAccess")}</p>
+              <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">{canCreateAlbum ? t("noAlbums") : t("noAccess")}</p>
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -351,7 +351,7 @@ export function UploadProvider({
                     addFiles(event.dataTransfer.files);
                   }}
                   className={cn(
-                    "flex flex-col items-center rounded-2xl border-2 border-dashed border-input bg-card px-5 py-7 text-center transition-colors",
+                    "flex flex-col items-center rounded-xl border border-dashed border-input bg-background px-5 py-8 text-center transition-colors",
                     dragging && "border-primary bg-accent",
                   )}
                 >
@@ -383,7 +383,7 @@ export function UploadProvider({
                     {queue.map((item) => {
                       const p = item.prepared;
                       return (
-                        <li key={item.clientId} className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card p-2">
+                        <li key={item.clientId} className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-card p-2">
                           <span className="grid size-[52px] place-items-center overflow-hidden rounded-xl bg-muted">
                             {p?.previewUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -515,8 +515,8 @@ function ArrivalCard({ arrival, floating = false, onOpen, onClose }: { arrival: 
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="-rotate-1 font-hand text-xl leading-none text-note">{t("arrivedNote")}</p>
-        <p className="mt-1 font-display text-lg font-bold leading-tight">{t("allDone", { count: arrival.count })}</p>
+        <p className="text-sm font-medium leading-relaxed text-note">{t("arrivedNote")}</p>
+        <p className="mt-1 font-display text-2xl font-medium leading-tight">{t("allDone", { count: arrival.count })}</p>
         {arrival.title ? <p className="truncate text-sm text-muted-foreground">{t("arrivedIn", { album: arrival.title })}</p> : null}
         <Button type="button" size="sm" onClick={onOpen} className="mt-2 rounded-lg">
           {t("openAlbum")}

@@ -272,7 +272,7 @@ export function ZoomableImage({ src, alt, layoutId, aspectRatio, poster, onDoubl
           onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
           className={cn(
-            "max-h-full max-w-full select-none rounded-md object-contain shadow-2xl",
+            "max-h-full max-w-full select-none rounded-md object-contain",
             zoomed ? "cursor-grab" : "cursor-zoom-in",
             failed && "invisible",
           )}

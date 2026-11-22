@@ -50,13 +50,13 @@
   --color-print: var(--print);
   --color-blank: var(--blank);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
 
   --animate-kenburns: kenburns 18s ease-in-out infinite alternate;
   @keyframes kenburns {
@@ -95,7 +95,7 @@
   --chart-3: #c99a5b;
   --chart-4: #7c6a5b;
   --chart-5: #3e5a5c;
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --sidebar: #f3efe7;
   --sidebar-foreground: #352e29;
   --sidebar-primary: #985740;
@@ -202,7 +202,7 @@
     backdrop-filter: blur(12px);
   }
   .date-stamp {
-    font-family: var(--font-stamp);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
     letter-spacing: 0.08em;
     color: #f0c8a6;
     font-size: 0.8125rem;
@@ -236,6 +236,12 @@
   }
   .page-enter {
     animation: page-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .paper-panel {
+    @apply min-w-0 rounded-xl border bg-card p-5 sm:p-6;
+  }
+  .field-help {
+    @apply text-sm leading-relaxed text-muted-foreground;
   }
   @keyframes page-enter {
     from { opacity: 0; }

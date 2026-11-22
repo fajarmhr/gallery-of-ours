@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFormatter, getLocale, getTranslations } from "next-intl/server";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState, PageSection } from "@/components/empty-state";
 import { MediaGallery } from "@/components/media/media-grid";
 import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import { RecapFacts, RecapStats } from "@/components/recap/recap-view";
@@ -25,13 +25,14 @@ export default async function RecapYearPage({ params }: PageProps<"/recap/[year]
   if (!Number.isInteger(year) || year < 1900 || year > 2200) notFound();
 
   const t = await getTranslations("recap");
+  const tc = await getTranslations("common");
   const format = await getFormatter();
   const locale = await getLocale();
   const timeZone = env.timeZone;
   const recap = await getRecap(user.id, year, timeZone);
 
   const back = (
-    <Link href="/recap" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground">
+    <Link href="/recap" className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-medium text-muted-foreground hover:text-foreground">
       <ArrowLeft className="size-4" />
       {t("title")}
     </Link>
@@ -41,7 +42,7 @@ export default async function RecapYearPage({ params }: PageProps<"/recap/[year]
     return (
       <>
         {back}
-        <EmptyState icon={Sparkles} title={t("emptyTitle")} text={t("emptyText")} />
+        <EmptyState icon={Sparkles} title={t("emptyTitle")} text={t("emptyText")} headingLevel={1} />
       </>
     );
   }
@@ -70,16 +71,14 @@ export default async function RecapYearPage({ params }: PageProps<"/recap/[year]
   return (
     <>
       {back}
-      <section className="relative mb-6 flex min-h-[340px] items-end overflow-hidden rounded-xl bg-[#2e241d] text-white">
-        <ThumbhashImage src={mediaUrl(hero.id, "large")} thumbhash={hero.thumbhash} className="absolute inset-0" imgClassName="animate-kenburns" eager />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1c120e]/90 via-[#1c120e]/25 to-transparent" />
-        <div className="relative flex w-full flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
-          <div>
-            <p className="inline-block -rotate-2 font-hand text-3xl text-[#ffd3a8]">{t("yearTitle", { year })}</p>
-            <h1 className="font-display text-7xl font-extrabold leading-none tracking-tighter sm:text-9xl">{year}</h1>
-          </div>
-          <StoryButton slides={slides} heading={t("yearTitle", { year })} label={t("play")} className="h-11 px-5" />
+      <section className="mb-8 grid overflow-hidden rounded-xl border bg-card lg:grid-cols-[.85fr_1.15fr]">
+        <div className="flex flex-col items-start justify-center p-6 sm:p-8">
+          <p className="mb-4 text-sm font-medium text-primary">{t("title")}</p>
+          <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight sm:text-5xl">{t("yearTitle", { year })}</h1>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{tc("items", { count: recap.photos + recap.videos })}</p>
+          <StoryButton slides={slides} heading={t("yearTitle", { year })} label={t("play")} className="mt-6 h-11 rounded-lg px-5" />
         </div>
+        <ThumbhashImage src={mediaUrl(hero.id, "large")} thumbhash={hero.thumbhash} alt={hero.caption ?? hero.albumTitle ?? t("yearTitle", { year })} className="aspect-[4/3] border-t lg:min-h-[320px] lg:border-l lg:border-t-0" eager />
       </section>
 
       <div className="flex flex-col gap-4">
@@ -95,15 +94,14 @@ export default async function RecapYearPage({ params }: PageProps<"/recap/[year]
       </div>
 
       {recap.loved.length > 0 ? (
-        <section className="mt-10">
-          <h2 className="mb-3 font-display text-2xl font-medium">{t("mostLoved")}</h2>
+        <PageSection title={t("mostLoved")} className="mt-10">
           <MediaGallery groups={[{ key: `loved-${year}`, items: recap.loved }]} />
-        </section>
+        </PageSection>
       ) : null}
 
-      <section className="mt-10">
+      <PageSection title={t("highlights")} className="mt-10">
         <MediaGallery groups={[{ key: `highlights-${year}`, items: recap.highlights }]} />
-      </section>
+      </PageSection>
     </>
   );
 }

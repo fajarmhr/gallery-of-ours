@@ -125,6 +125,7 @@
     "haveAccount": "Sudah punya akun?",
     "checkEmailTitle": "Cek email Anda",
     "checkEmailText": "Kami mengirim tautan ke {email}. Buka tautan itu untuk mengonfirmasi email, lalu admin keluarga akan meninjau permintaan Anda.",
+    "checkEmailTextNoAddress": "Buka tautan di email untuk mengonfirmasi alamat Anda. Setelah itu, admin keluarga akan meninjau permintaan Anda.",
     "forgotTitle": "Lupa kata sandi?",
     "forgotLead": "Masukkan email yang Anda daftarkan, kami akan mengirim tautan untuk mengatur ulang kata sandi.",
     "sendReset": "Kirim tautan",
@@ -505,7 +506,8 @@
     "emptyTitle": "Belum ada kenangan tahun ini",
     "emptyText": "Foto yang diambil tahun ini akan muncul di sini.",
     "storyIntro": "{year} kita",
-    "storyOutro": "Sampai jumpa di tahun berikutnya, bersama"
+    "storyOutro": "Sampai jumpa di tahun berikutnya, bersama",
+    "highlights": "Momen untuk dikenang"
   },
   "story": {
     "close": "Tutup cerita",
@@ -657,6 +659,8 @@
     "addMemories": "Tambah kenangan",
     "skipToContent": "Langsung ke konten",
     "photoPreview": "Foto keluarga",
-    "videoPreview": "Video · buka untuk menonton"
+    "videoPreview": "Video · buka untuk menonton",
+    "pageErrorTitle": "Halaman belum bisa dibuka",
+    "pageErrorText": "Coba lagi. Jika masih belum berhasil, kembali beberapa saat lagi."
   }
 }

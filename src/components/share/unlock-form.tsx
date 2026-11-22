@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { unlockShareLink } from "@/actions/share";
+import { Field, FormHeading, FormMessage, fieldClass } from "@/components/auth/auth-presentation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function UnlockForm({ token }: { token: string }) {
   const t = useTranslations("share");
   const te = useTranslations("errors");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -20,32 +22,29 @@ export function UnlockForm({ token }: { token: string }) {
     event.preventDefault();
     setPending(true);
     setError(null);
-    const result = await unlockShareLink(token, password);
-    setPending(false);
-    if (!result.ok) {
-      setError(te.has(result.error) ? te(result.error) : te("unknown"));
-      return;
+    try {
+      const result = await unlockShareLink(token, password);
+      if (!result.ok) {
+        setError(te.has(result.error) ? te(result.error) : te("unknown"));
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError(te("network"));
+    } finally {
+      setPending(false);
     }
-    router.refresh();
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <span className="grid size-14 place-items-center rounded-2xl bg-accent text-accent-foreground">
-        <KeyRound className="size-7" />
-      </span>
-      <div>
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">{t("enterPassword")}</h1>
-        <p className="mt-1 text-muted-foreground">{t("enterPasswordText")}</p>
-      </div>
-      <Input type="password" required autoFocus value={password} onChange={(e) => setPassword(e.target.value)} aria-label={t("password")} className="h-11 rounded-xl" />
-      {error ? (
-        <p role="alert" className="text-sm font-medium text-destructive">
-          {error}
-        </p>
-      ) : null}
-      <Button type="submit" disabled={pending} className="h-11 rounded-xl text-base">
-        {t("unlock")}
+    <form onSubmit={submit} className="flex flex-col gap-5" aria-busy={pending}>
+      <FormHeading icon={<KeyRound />} title={t("enterPassword")} lead={t("enterPasswordText")} />
+      <Field id="share-password" label={t("password")}>
+        <Input id="share-password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? "share-password-error" : undefined} className={fieldClass} />
+      </Field>
+      {error ? <FormMessage error id="share-password-error">{error}</FormMessage> : null}
+      <Button type="submit" disabled={pending} className="h-12 rounded-lg text-base">
+        {pending ? tc("loading") : t("unlock")}
       </Button>
     </form>
   );

@@ -37,7 +37,7 @@ export function AppSidebar({ user, pendingCount, since }: Props) {
         <item.icon className="size-[18px]" strokeWidth={active ? 2 : 1.7} />
         {t(item.key)}
         {item.key === "family" && pendingCount > 0 ? (
-          <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold leading-none text-primary-foreground">
+          <span className="ml-auto rounded-md bg-accent px-2 py-1 text-xs font-medium leading-none text-accent-foreground">
             {pendingCount}
           </span>
         ) : null}

@@ -49,13 +49,13 @@ export function MediaGallery({
 
   return (
     <LayoutGroup>
-      <div className="flex flex-col gap-9">
+      <div className="flex flex-col gap-10">
         {groups.map((group, groupIndex) => (
           <section key={group.key} id={`group-${group.key}`} className="scroll-mt-24">
             {group.divider ? (
               <h2 className="sticky top-[calc(4.75rem+env(safe-area-inset-top))] z-10 -mx-1 mb-5 flex flex-wrap items-baseline gap-x-3 border-b bg-background/95 px-1 py-3 backdrop-blur-sm">
-                <span className="font-display text-4xl font-normal tracking-tight">{group.divider}</span>
-                {group.dividerNote ? <span className="inline-block -rotate-2 font-hand text-xl text-note">{group.dividerNote}</span> : null}
+                <span className="font-display text-3xl font-normal tracking-tight">{group.divider}</span>
+                {group.dividerNote ? <span className="text-sm font-medium text-note">{group.dividerNote}</span> : null}
               </h2>
             ) : null}
             {group.title ? (
@@ -134,7 +134,7 @@ function TileBadges({ card }: { card: MediaCard }) {
   return (
     <>
       {card.type === "video" ? (
-        <span className="pointer-events-none absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-bold tabular-nums text-white">
+        <span className="pointer-events-none absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-[#211e1b]/75 px-2 py-0.5 text-xs font-medium tabular-nums text-white">
           <Play className="size-3 fill-current" />
           {formatDuration(card.durationSec)}
         </span>

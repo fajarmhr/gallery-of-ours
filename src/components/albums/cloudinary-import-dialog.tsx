@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ThumbhashImage } from "@/components/media/thumbhash-image";
 import { browseCloudinaryFolder, importFromCloudinary } from "@/actions/cloudinary";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -122,7 +123,7 @@ export function CloudinaryImportDialog({
     <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-4 sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl font-extrabold tracking-tight">{t("title")}</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-medium tracking-tight">{t("title")}</DialogTitle>
           <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
@@ -136,7 +137,7 @@ export function CloudinaryImportDialog({
                 goTo("");
               }}
             >
-              <SelectTrigger className="h-9 w-full min-w-0 max-w-full rounded-lg sm:w-auto [&_[data-slot=select-value]]:min-w-0" aria-label={t("account")}>
+              <SelectTrigger className="h-11 w-full min-w-0 max-w-full rounded-lg sm:w-auto [&_[data-slot=select-value]]:min-w-0" aria-label={t("account")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -154,7 +155,7 @@ export function CloudinaryImportDialog({
               disabled={busy}
               onClick={() => goTo("")}
               aria-current={path === "" ? "page" : undefined}
-              className="rounded-md px-2 py-1 font-semibold hover:bg-foreground/5 aria-[current=page]:text-primary"
+              className="min-h-11 rounded-lg px-2 font-medium hover:bg-muted aria-[current=page]:text-primary"
             >
               {t("home")}
             </button>
@@ -168,7 +169,7 @@ export function CloudinaryImportDialog({
                     disabled={busy}
                     onClick={() => goTo(target)}
                     aria-current={target === path ? "page" : undefined}
-                    className="min-w-0 truncate rounded-md px-2 py-1 font-semibold hover:bg-foreground/5 aria-[current=page]:text-primary"
+                    className="min-h-11 min-w-0 truncate rounded-lg px-2 font-medium hover:bg-muted aria-[current=page]:text-primary"
                   >
                     {name}
                   </button>
@@ -178,13 +179,16 @@ export function CloudinaryImportDialog({
           </nav>
         </div>
 
-        <div className="min-h-[260px] flex-1 overflow-y-auto rounded-2xl border bg-muted/40 p-3">
+        <div className="min-h-40 flex-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/35 p-3 sm:min-h-[260px]">
           {!ready ? (
-            <div className="grid min-h-[230px] place-items-center">
-              <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
+            <div role="status" className="flex min-h-36 items-center justify-center gap-2 text-sm text-muted-foreground sm:min-h-[230px]">
+              <LoaderCircle className="size-5 animate-spin" />{tc("loading")}
             </div>
           ) : ready.error ? (
-            <p className="p-3 text-sm text-destructive">{te.has(ready.error) && ready.error !== "unknown" ? te(ready.error) : t("loadFailed")}</p>
+            <div role="alert" className="flex flex-wrap items-center gap-3 p-3 text-sm">
+              <p className="flex-1 text-destructive">{te.has(ready.error) && ready.error !== "unknown" ? te(ready.error) : t("loadFailed")}</p>
+              <Button variant="outline" onClick={() => setReload((n) => n + 1)}>{tc("retry")}</Button>
+            </div>
           ) : ready.folders.length === 0 && ready.assets.length === 0 ? (
             <p className="p-3 text-sm text-muted-foreground">{t("empty")}</p>
           ) : (
@@ -197,7 +201,7 @@ export function CloudinaryImportDialog({
                       type="button"
                       disabled={busy}
                       onClick={() => goTo(folder.path)}
-                      className="flex min-w-0 items-center gap-2 rounded-xl border bg-card px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-foreground/5"
+                      className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg border bg-card px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-muted"
                     >
                       <Folder className="size-4 shrink-0 text-primary" />
                       <span className="truncate">{folder.name}</span>
@@ -215,23 +219,23 @@ export function CloudinaryImportDialog({
                         key={asset.publicId}
                         type="button"
                         title={asset.name}
+                        aria-label={asset.name}
                         disabled={busy || unavailable}
                         aria-pressed={isSelected}
                         onClick={() => toggle(asset)}
                         className={cn(
-                          "relative aspect-square overflow-hidden rounded-xl bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring disabled:cursor-not-allowed",
+                          "relative aspect-square overflow-hidden rounded-lg bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring disabled:cursor-not-allowed",
                           isSelected && "ring-3 ring-primary",
                         )}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={asset.previewUrl} alt="" loading="lazy" className={cn("size-full object-cover", unavailable && "opacity-40")} />
+                        <ThumbhashImage src={asset.previewUrl} className={cn("size-full", unavailable && "opacity-40")} />
                         {isSelected ? (
-                          <span className="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground shadow">
+                          <span className="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-md bg-primary text-primary-foreground">
                             <Check className="size-4" />
                           </span>
                         ) : null}
                         {unavailable ? (
-                          <span className="absolute inset-x-1.5 bottom-1.5 truncate rounded-md bg-background/90 px-1.5 py-0.5 text-[11px] font-semibold">
+                          <span className="absolute inset-x-1.5 bottom-1.5 truncate rounded-md bg-background/90 px-1.5 py-0.5 text-xs font-medium">
                             {asset.added ? t("added") : t("private")}
                           </span>
                         ) : null}
@@ -253,9 +257,9 @@ export function CloudinaryImportDialog({
               value={fallbackDate}
               disabled={busy}
               onChange={(event) => setFallbackDate(event.target.value)}
-              className="h-10 w-44 rounded-xl"
+              className="h-11 w-full rounded-lg sm:w-44"
             />
-            <p className="text-xs text-muted-foreground">{t("fallbackHint")}</p>
+            <p className="max-w-[48ch] text-sm leading-relaxed text-muted-foreground">{t("fallbackHint")}</p>
           </div>
           {selectable.length > 0 ? (
             <Button
@@ -279,7 +283,7 @@ export function CloudinaryImportDialog({
           <Button variant="ghost" disabled={busy} onClick={() => onOpenChange(false)}>
             {tc("cancel")}
           </Button>
-          <Button disabled={busy || selected.size === 0} onClick={runImport} className="rounded-xl">
+          <Button disabled={busy || selected.size === 0} onClick={runImport} className="min-h-11 rounded-lg">
             {busy ? <LoaderCircle className="animate-spin" /> : <CloudDownload />}
             {t("import", { count: selected.size })}
           </Button>

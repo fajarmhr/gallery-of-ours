@@ -14,7 +14,8 @@ import {
   user,
   type BilingualText,
 } from "@/db/schema";
-import { nextOccurrence } from "@/lib/format";
+import { daysBetween, nextOccurrence } from "@/lib/format";
+import { buildRecapHighlights } from "@/lib/recap-highlights";
 import { isAlbumLocked } from "@/lib/permissions";
 import { sign } from "@/lib/signing";
 
@@ -368,13 +369,13 @@ export type UpcomingItem =
   | { kind: "milestone"; id: string; title: string; milestoneKind: string; date: string; originalDate: string; repeatsYearly: boolean; days: number }
   | { kind: "capsule"; id: string; title: string; date: string; days: number };
 
-export async function getUpcoming(windowDays = 60): Promise<UpcomingItem[]> {
+export async function getUpcoming(windowDays = 60, timeZone?: string): Promise<UpcomingItem[]> {
   const now = new Date();
   const items: UpcomingItem[] = [];
   for (const m of await db.select().from(milestones)) {
-    const next = nextOccurrence(m.date, m.repeatsYearly, now);
+    const next = nextOccurrence(m.date, m.repeatsYearly, now, timeZone);
     if (!next) continue;
-    const days = Math.round((next.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000);
+    const days = daysBetween(now, next, timeZone);
     if (days <= windowDays) {
       items.push({ kind: "milestone", id: m.id, title: m.title, milestoneKind: m.kind, date: next.toISOString(), originalDate: m.date, repeatsYearly: m.repeatsYearly, days });
     }
@@ -579,8 +580,7 @@ export async function getRecap(viewerId: string, year: number, timeZone: string)
 
   const photosOnly = cards.filter((c) => c.type === "photo");
   const loved = [...cards].sort((a, b) => (score.get(b.id) ?? 0) - (score.get(a.id) ?? 0)).filter((c) => (score.get(c.id) ?? 0) > 0);
-  const step = Math.max(1, Math.floor(photosOnly.length / 24));
-  const highlights = [...new Map([...loved, ...photosOnly.filter((_, i) => i % step === 0)].map((c) => [c.id, c])).values()].slice(0, 24);
+  const highlights = buildRecapHighlights(cards, loved);
 
   return {
     year,

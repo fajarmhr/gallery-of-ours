@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Earth } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { MediaGallery } from "@/components/media/media-grid";
+import { EmptyState, PageHeader, PageSection } from "@/components/empty-state";
 import { GlobeView } from "@/components/places/globe";
 import { mediaUrl } from "@/lib/format";
 import { getPlaceMedia, getPlacesOverview } from "@/lib/queries";
@@ -12,6 +14,7 @@ export default async function GlobePage({ searchParams }: PageProps<"/globe">) {
   const user = await requireActiveUser();
   const params = await searchParams;
   const t = await getTranslations("places");
+  const tg = await getTranslations("globe");
   const places = await getPlacesOverview(user.id);
 
   // Nothing is selected until a place is tapped on the globe.
@@ -20,22 +23,19 @@ export default async function GlobePage({ searchParams }: PageProps<"/globe">) {
 
   return (
     <>
-      <GlobeView
+      <PageHeader title={tg("title")} subtitle={tg("subtitle")} />
+      {places.length ? <GlobeView
         selectedId={selected?.id ?? null}
         focusSelected={Boolean(selected)}
         places={places.map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, count: p.count, coverUrl: mediaUrl(p.coverId, "thumb") }))}
-      />
+      /> : <EmptyState icon={Earth} title={t("emptyTitle")} text={t("emptyText")} />}
 
       {selected ? (
-        <section className="mt-10">
-          <div className="mb-4 flex flex-wrap items-baseline gap-x-3">
-            <h2 className="font-display text-3xl font-medium tracking-tight">{selected.name}</h2>
-            <span className="text-sm text-muted-foreground">{t("photosHere")}</span>
-          </div>
+        <PageSection title={selected.name} description={t("photosHere")} className="mt-10">
           <MediaGallery groups={[{ key: selected.id, items }]} />
-        </section>
+        </PageSection>
       ) : (
-        places.length > 0 && <p className="mt-10 text-center text-sm text-muted-foreground">{t("pickPlace")}</p>
+        places.length > 0 && <p className="mt-6 rounded-xl border border-dashed px-5 py-6 text-center text-sm text-muted-foreground">{t("pickPlace")}</p>
       )}
     </>
   );

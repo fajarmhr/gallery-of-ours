@@ -70,12 +70,12 @@ export default async function TimelinePage({ searchParams }: PageProps<"/timelin
 
   return (
     <>
-      <PageHeader title={t("title")} subtitle={t("subtitle")}>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} note={tc("items", { count: items.length })}>
         {modes}
       </PageHeader>
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_64px] lg:gap-6">
+      <div className="min-w-0 lg:grid lg:grid-cols-[minmax(0,1fr)_80px] lg:gap-8">
         <MediaGallery groups={groups} />
-        <YearRail anchors={anchors} />
+        <YearRail anchors={anchors} label={t("years")} />
       </div>
     </>
   );
